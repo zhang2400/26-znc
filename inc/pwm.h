@@ -18,7 +18,7 @@ typedef enum // Ã¶¾ÙPWMÒý½Å
 int get_pwmchip(pwm_channel_enum tim_pin);
 void pwm_init(pwm_channel_enum tim_pin, uint32_t freq, uint32_t duty);
 void pwm_set_duty(pwm_channel_enum tim_pin, uint32_t duty);
-void pwm_test(pwm_channel_enum tim_pin);
+void pwm_test(pwm_channel_enum pwm_pin, uint32_t freq);
 
 #endif
 

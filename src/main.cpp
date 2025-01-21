@@ -58,7 +58,7 @@ int main()
     pwm_init(PWM_TIM0_GPIO64, 15000, 5000);
     pwm_set_duty(PWM_TIM0_GPIO64, 2500);
 
-    // pwm_test(PWM_TIM0_GPIO64);
+    pwm_test(PWM_TIM0_GPIO64, 15000);
 
     return 0;
 }
