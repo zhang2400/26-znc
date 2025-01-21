@@ -23,6 +23,9 @@ include_directories(${apriltag_INCLUDE_DIRS})
 link_directories(${CMAKE_SOURCE_DIR}/lib)
 link_directories(${apriltag_LIBRARY_DIRS})
 
+# 递归搜索inc目录下的所有.h文件
+file(GLOB_RECURSE HEADERS "${CMAKE_SOURCE_DIR}/inc/*.h")
+
 # 递归搜索src目录下的所有.cpp文件
 file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 
@@ -33,7 +36,7 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-add_executable(${EXECUTABLE_NAME} ${SOURCES})
+add_executable(${EXECUTABLE_NAME} ${SOURCES} ${HEADERS})
 
 # 链接OpenCV和apriltag库
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${OpenCV_LIBS} apriltag::apriltag)

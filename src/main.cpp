@@ -9,6 +9,7 @@
  * Copyright (c) 2024 by ilikara 3435193369@qq.com, All Rights Reserved.
  */
 #include "GPIO.h"
+#include "pwm.h"
 #include "pwm_gtim.h"
 #include "pwm_atim.h"
 #include "encoder.h"
@@ -36,15 +37,28 @@ int main()
     // std::cin >> gpio_num >> ch >> per >> duty;
     // PWM_ATIM test(gpio_num, 0b11, ch, per, duty);
 
-    PWM_ATIM test(86, 0b11, 3, 200000, 50000, 1);
-    test.enable();
-    for (int i = 0; i < 100; ++i)
-    {
-        // std::cout << encoder.pulse_counter_update() << std::endl;
-        // usleep(5000);
-        std::cin >> per >> duty;
-        test.setPeriod(per);
-        test.setDutyCycle(duty);
-    }
+    // PWM_ATIM test(86, 0b11, 3, 200000, 50000, 1);
+    // test.enable();
+    //
+    // for (int i = 0; i < 100; ++i)
+    // {
+    //     // std::cout << encoder.pulse_counter_update() << std::endl;
+    //     // usleep(5000);
+    //     std::cin >> per >> duty;
+    //     test.setPeriod(per);
+    //     test.setDutyCycle(duty);
+    // }
+
+    PWM_GTIM test2(88, 0b11, 2, 200000, 50000);
+    test2.enable();
+
+    PWM_GTIM test3(89, 0b11, 3, 200000, 50000);
+    test3.enable();
+
+    pwm_init(PWM_TIM0_GPIO64, 15000, 5000);
+    pwm_set_duty(PWM_TIM0_GPIO64, 2500);
+
+    // pwm_test(PWM_TIM0_GPIO64);
+
     return 0;
 }

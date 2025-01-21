@@ -6,7 +6,7 @@
 #include <opencv2/opencv.hpp>
 #include <mytag.h>
 
-int main() {
+int tag_test() {
     auto cap = cv::VideoCapture(0);
     if (!cap.isOpened()) {
         std::cerr << "Error: Cannot open camera" << std::endl;
