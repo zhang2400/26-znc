@@ -16,18 +16,21 @@ find_package(OpenCV REQUIRED)
 # 设置apriltag路径
 find_package(apriltag REQUIRED)
 
+# 包含头文件路径
 include_directories(${CMAKE_SOURCE_DIR}/inc)
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${apriltag_INCLUDE_DIRS})
 
+# 链接库文件路径
 link_directories(${CMAKE_SOURCE_DIR}/lib)
 link_directories(${apriltag_LIBRARY_DIRS})
 
-# 递归搜索inc目录下的所有.h文件
-file(GLOB_RECURSE HEADERS "${CMAKE_SOURCE_DIR}/inc/*.h")
+# 源文件列表
+file(GLOB SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+file(GLOB CODE_FILES "${CMAKE_SOURCE_DIR}/code/*.cpp")
 
-# 递归搜索src目录下的所有.cpp文件
-file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+# 合并源文件
+set(SOURCES ${SRC_FILES} ${CODE_FILES})
 
 # 查找 CPU 架构
 execute_process(
@@ -36,7 +39,8 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-add_executable(${EXECUTABLE_NAME} ${SOURCES} ${HEADERS})
+# 创建可执行文件
+add_executable(${EXECUTABLE_NAME} ${SOURCES})
 
 # 链接OpenCV和apriltag库
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${OpenCV_LIBS} apriltag::apriltag)
