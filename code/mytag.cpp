@@ -9,26 +9,26 @@ cv::Mat matd_to_cvmat(const matd_t* mat) {
     return {static_cast<int>(mat->nrows), static_cast<int>(mat->ncols), CV_64F, (void*)mat->data};
 }
 
-mytag::mytag(const char *tagFamily, float decimate, float sigma, int threads, bool debug, bool refine) {
+mytag::mytag(const std::string& tagFamily, float decimate, float sigma, int threads, bool debug, bool refine) {
     // 创建AprilTag检测器
     td = apriltag_detector_create();
-    if (strcmp(tagFamily, "tag36h11") == 0) {
+    if (tagFamily == "tag36h11") {
         tf = tag36h11_create();
-    } else if (strcmp(tagFamily, "tag36h10") == 0) {
+    } else if (tagFamily == "tag36h10") {
         tf = tag36h10_create();
-    } else if (strcmp(tagFamily, "tag25h9") == 0) {
+    } else if (tagFamily == "tag25h9") {
         tf = tag25h9_create();
-    } else if (strcmp(tagFamily, "tag16h5") == 0) {
+    } else if (tagFamily == "tag16h5") {
         tf = tag16h5_create();
-    } else if (strcmp(tagFamily, "tagCircle21h7") == 0) {
+    } else if (tagFamily == "tagCircle21h7") {
         tf = tagCircle21h7_create();
-    } else if (strcmp(tagFamily, "tagCircle49h12") == 0) {
+    } else if (tagFamily == "tagCircle49h12") {
         tf = tagCircle49h12_create();
-    } else if (strcmp(tagFamily, "tagCustom48h12") == 0) {
+    } else if (tagFamily == "tagCustom48h12") {
         tf = tagCustom48h12_create();
-    } else if (strcmp(tagFamily, "tagStandard41h12") == 0) {
+    } else if (tagFamily == "tagStandard41h12") {
         tf = tagStandard41h12_create();
-    } else if (strcmp(tagFamily, "tagStandard52h13") == 0) {
+    } else if (tagFamily == "tagStandard52h13") {
         tf = tagStandard52h13_create();
     } else {
         std::cerr << "Error: Invalid tag family" << std::endl;
@@ -49,23 +49,23 @@ mytag::mytag(const char *tagFamily, float decimate, float sigma, int threads, bo
 
 mytag::~mytag() {
     apriltag_detector_destroy(td);
-    if (strcmp(tf->name, "tag36h11") == 0) {
+    if (tf->name == "tag36h11") {
         tag36h11_destroy(tf);
-    } else if (strcmp(tf->name, "tag36h10") == 0) {
+    } else if (tf->name == "tag36h10") {
         tag36h10_destroy(tf);
-    } else if (strcmp(tf->name, "tag25h9") == 0) {
+    } else if (tf->name == "tag25h9") {
         tag25h9_destroy(tf);
-    } else if (strcmp(tf->name, "tag16h5") == 0) {
+    } else if (tf->name == "tag16h5") {
         tag16h5_destroy(tf);
-    } else if (strcmp(tf->name, "tagCircle21h7") == 0) {
+    } else if (tf->name == "tagCircle21h7") {
         tagCircle21h7_destroy(tf);
-    } else if (strcmp(tf->name, "tagCircle49h12") == 0) {
+    } else if (tf->name == "tagCircle49h12") {
         tagCircle49h12_destroy(tf);
-    } else if (strcmp(tf->name, "tagCustom48h12") == 0) {
+    } else if (tf->name == "tagCustom48h12") {
         tagCustom48h12_destroy(tf);
-    } else if (strcmp(tf->name, "tagStandard41h12") == 0) {
+    } else if (tf->name == "tagStandard41h12") {
         tagStandard41h12_destroy(tf);
-    } else if (strcmp(tf->name, "tagStandard52h13") == 0) {
+    } else if (tf->name == "tagStandard52h13") {
         tagStandard52h13_destroy(tf);
     }
 }
