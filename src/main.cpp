@@ -10,10 +10,18 @@
  */
 #include "GPIO.h"
 #include "pwm.h"
+#include <thread>
 #include "pwm_gtim.h"
 #include "pwm_atim.h"
 #include "encoder.h"
+#include "pit_sw.h"
 #include <iostream>
+
+void image_processing_loop() {
+    // while (true) {
+        pwm_test(PWM_TIM0_GPIO64, 15000);
+    // }
+}
 
 int main()
 {
@@ -32,23 +40,6 @@ int main()
         return 1;
     }
 
-    // ENCODER encoder(0, 67);
-    int gpio_num, ch, per, duty;
-    // std::cin >> gpio_num >> ch >> per >> duty;
-    // PWM_ATIM test(gpio_num, 0b11, ch, per, duty);
-
-    // PWM_ATIM test(86, 0b11, 3, 200000, 50000, 1);
-    // test.enable();
-    //
-    // for (int i = 0; i < 100; ++i)
-    // {
-    //     // std::cout << encoder.pulse_counter_update() << std::endl;
-    //     // usleep(5000);
-    //     std::cin >> per >> duty;
-    //     test.setPeriod(per);
-    //     test.setDutyCycle(duty);
-    // }
-
     PWM_GTIM test2(88, 0b11, 2, 200000, 50000);
     test2.enable();
 
@@ -58,7 +49,11 @@ int main()
     pwm_init(PWM_TIM0_GPIO64, 15000, 5000);
     pwm_set_duty(PWM_TIM0_GPIO64, 2500);
 
-    pwm_test(PWM_TIM0_GPIO64, 15000);
+    std::thread timerThread(pit_init_ms, 7, timer_interrupt_handler);
+    timerThread.detach();  // 分离定时器线程
+
+    // 主线程执行图像处理任务
+    image_processing_loop();
 
     return 0;
 }
