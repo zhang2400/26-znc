@@ -4,16 +4,30 @@
 
 #include "pit_sw.h"
 
-void timer_interrupt_handler();
 timespec get_current_time();
 uint64_t time_diff_ns(const timespec& start, const timespec& end);
 
 using TimerCallback = void(*)();
 
+void timer_interrupt_handler() {
+    static timespec last_ts = get_current_time();
+    timespec current_ts = get_current_time();
+    uint64_t diff_ns = time_diff_ns(last_ts, current_ts);
+    last_ts = current_ts;
+
+    double diff_ms = diff_ns / 1e6;
+    std::cout << "[Control] Timer triggered, time interval: " << diff_ms << " ms" << std::endl;
+
+    if (L_Encoder != nullptr) {
+        double rps = L_Encoder->pulse_counter_update();
+        printf("Current RPS: %.2f\n", rps);
+    }
+}
+
+
 int pit_init_ms(uint32_t time_ms, TimerCallback cb) {
     return pit_init(time_ms * 1000, cb);
 }
-
 
 int pit_init(uint32_t time_us, TimerCallback cb) {
     int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
@@ -70,14 +84,4 @@ timespec get_current_time() {
 
 uint64_t time_diff_ns(const timespec& start, const timespec& end) {
     return (end.tv_sec - start.tv_sec) * 1000000000ULL + (end.tv_nsec - start.tv_nsec);
-}
-
-void timer_interrupt_handler() {
-    static timespec last_ts = get_current_time();
-    timespec current_ts = get_current_time();
-    uint64_t diff_ns = time_diff_ns(last_ts, current_ts);
-    last_ts = current_ts;
-
-    double diff_ms = diff_ns / 1e6;
-    std::cout << "[Control] Timer triggered, time interval: " << diff_ms << " ms" << std::endl;
 }

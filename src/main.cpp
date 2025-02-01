@@ -15,7 +15,11 @@
 #include "pwm_atim.h"
 #include "encoder.h"
 #include "pit_sw.h"
+#include "encoder.h"
 #include <iostream>
+
+ENCODER* L_Encoder = nullptr;
+ENCODER* R_Encoder = nullptr;
 
 void image_processing_loop() {
     // while (true) {
@@ -40,6 +44,13 @@ int main()
         return 1;
     }
 
+    int pwmChannel = 2;
+    int dirGPIO = 73;
+
+    // 创建编码器对象
+    L_Encoder = new ENCODER(pwmChannel, dirGPIO);
+    R_Encoder = new ENCODER(pwmChannel, dirGPIO);
+
     PWM_GTIM test2(88, 0b11, 2, 200000, 50000);
     test2.enable();
 
@@ -49,7 +60,7 @@ int main()
     pwm_init(PWM_TIM0_GPIO64, 15000, 5000);
     pwm_set_duty(PWM_TIM0_GPIO64, 2500);
 
-    std::thread timerThread(pit_init_ms, 7, timer_interrupt_handler);
+    std::thread timerThread(pit_init_ms, 10, timer_interrupt_handler);
     timerThread.detach();  // 分离定时器线程
 
     // 主线程执行图像处理任务
