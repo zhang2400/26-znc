@@ -20,7 +20,7 @@
 
  class mytag {
  public:
-     mytag(const char *tagFamily, float decimate, float sigma, int threads, bool debug, bool refine);
+     mytag(const std::string& tagFamily, float decimate, float sigma, int threads, bool debug, bool refine);
      ~mytag();
      void detect(cv::Mat &gray);
      void draw(cv::Mat &frame);
