@@ -23,9 +23,10 @@ int tag_test() {
         double start = cv::getTickCount();
         cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
         atag.detect(gray);
+        atag.getClosetTagIndex();
         atag.draw(frame);
-        auto id = atag.getTag0ID();
-        auto distance = atag.getTag0Distance(1000);
+        auto id = atag.getClosetTagID();
+        auto distance = atag.getClosetTagDistance(1000);
         double end = cv::getTickCount();
         auto duration = (end - start) / cv::getTickFrequency();
         std::string text = "process: " + std::to_string(duration*1000) + "ms";
