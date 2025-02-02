@@ -7,10 +7,10 @@
 
 #include <stdint.h>
 
-#define PWM_DUTY_MAX            10000 // PWM最大占空比
-#define CMU_CLK_FREQ            1000000000.0f // CMU时钟频率1GHz
+#define PWM_DUTY_MAX            10000 // PWM???????
+#define CMU_CLK_FREQ            1000000000.0f // CMU??????1GHz
 
-typedef enum // 枚举PWM引脚
+typedef enum // ???PWM????
 {
     PWM_TIM0_GPIO64,   PWM_TIM1_GPIO65,   PWM_TIM2_GPIO66,   PWM_TIM3_GPIO67,
 }pwm_channel_enum;

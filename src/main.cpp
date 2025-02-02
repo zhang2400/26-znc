@@ -51,11 +51,12 @@ int main()
     L_Encoder = new ENCODER(pwmChannel, dirGPIO);
     R_Encoder = new ENCODER(pwmChannel, dirGPIO);
 
-    PWM_GTIM test2(88, 0b11, 2, 200000, 50000);
+    PWM_GTIM test2(88, 0b11, 2, 8000, 2000);
     test2.enable();
 
-    PWM_GTIM test3(89, 0b11, 3, 200000, 50000);
+    PWM_GTIM test3(89, 0b11, 3, 8000, 4500);
     test3.enable();
+
 
     pwm_init(PWM_TIM0_GPIO64, 15000, 5000);
     pwm_set_duty(PWM_TIM0_GPIO64, 2500);

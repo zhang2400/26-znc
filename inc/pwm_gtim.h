@@ -48,13 +48,17 @@
 class PWM_GTIM
 {
 public:
-    PWM_GTIM(int gpio, int mux, int chNum_, int period_, int duty_cycle_);
+    PWM_GTIM(int gpio, int mux, int chNum_, double frequency, int duty_value);
     ~PWM_GTIM(void);
 
     void enable(void);
     void disable(void);
     void setPeriod(unsigned int period_10ns_);
     void setDutyCycle(unsigned int duty_cycle_10ns_);
+
+    // 新增函数：设置 PWM 频率，单位为 Hz
+    void setFrequency(double frequency);
+
     uint32_t period_10ns, duty_cycle_10ns;
 
 private:
