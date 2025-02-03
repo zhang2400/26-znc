@@ -4,6 +4,12 @@
 
 #include "mytag.h"
 
+/**
+ * @brief 将matd_t类型的矩阵转换为OpenCV的cv::Mat类型
+ *
+ * @param mat 输入的matd_t类型矩阵
+ * @return cv::Mat 转换后的cv::Mat对象
+ */
 cv::Mat matd_to_cvmat(const matd_t* mat) {
     // 创建一个cv::Mat对象，行数为nrows，列数为ncols，数据类型为CV_64F（64位浮动类型）
     return {static_cast<int>(mat->nrows), static_cast<int>(mat->ncols), CV_64F, (void*)mat->data};
@@ -34,43 +40,44 @@ mytag::mytag(const std::string& tagFamily, float decimate, float sigma, int thre
         std::cerr << "Error: Invalid tag family" << std::endl;
         return;
     }
+    this->tagFamily = tagFamily;
     apriltag_detector_add_family(td, tf);
 
     // 设置参数
-    td->quad_decimate = decimate;  // 降采样，默认1，越小精度越高，速度越慢;越大精度越低，速度越快，会出现误检
-    td->quad_sigma = sigma;  // 高斯模糊，默认0.5，越大抗噪越高，速度越慢;越小抗噪越低，速度越快
-    td->nthreads = threads;  // 线程数，默认1，越大速度越快，2核以上没区别
-    td->debug = debug;  // 调试模式，默认false，具体看官网介绍
-    td->refine_edges = refine;  // 优化边缘，默认false，如果标签边缘不清晰，可以设置为true
+    td->quad_decimate = decimate;
+    td->quad_sigma = sigma;
+    td->nthreads = threads;
+    td->debug = debug;
+    td->refine_edges = refine;
 
     detections = nullptr;
-
+    closestTagIndex = -1;
 }
 
 mytag::~mytag() {
     apriltag_detector_destroy(td);
-    if (tf->name == "tag36h11") {
+    if (tagFamily == "tag36h11") {
         tag36h11_destroy(tf);
-    } else if (tf->name == "tag36h10") {
+    } else if (tagFamily == "tag36h10") {
         tag36h10_destroy(tf);
-    } else if (tf->name == "tag25h9") {
+    } else if (tagFamily == "tag25h9") {
         tag25h9_destroy(tf);
-    } else if (tf->name == "tag16h5") {
+    } else if (tagFamily == "tag16h5") {
         tag16h5_destroy(tf);
-    } else if (tf->name == "tagCircle21h7") {
+    } else if (tagFamily == "tagCircle21h7") {
         tagCircle21h7_destroy(tf);
-    } else if (tf->name == "tagCircle49h12") {
+    } else if (tagFamily == "tagCircle49h12") {
         tagCircle49h12_destroy(tf);
-    } else if (tf->name == "tagCustom48h12") {
+    } else if (tagFamily == "tagCustom48h12") {
         tagCustom48h12_destroy(tf);
-    } else if (tf->name == "tagStandard41h12") {
+    } else if (tagFamily == "tagStandard41h12") {
         tagStandard41h12_destroy(tf);
-    } else if (tf->name == "tagStandard52h13") {
+    } else if (tagFamily == "tagStandard52h13") {
         tagStandard52h13_destroy(tf);
     }
 }
 
-void mytag::detect(cv::Mat &gray) {
+void mytag::detect(const cv::Mat& gray) {
     // 将OpenCV图像转换为AprilTag所需的格式
     image_u8_t im = {
         .width = gray.cols,
@@ -86,19 +93,20 @@ void mytag::detect(cv::Mat &gray) {
 void mytag::draw(cv::Mat &frame) {
     // 绘制检测到的标签
     for (int i = 0; i < zarray_size(detections); i++) {
+        cv::Scalar color = (i == closestTagIndex) ? cv::Scalar(0, 0xff, 0) : cv::Scalar(0, 0, 0xff);
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
 
         // 在框架上绘制检测到的标签
-        line(frame,cv::Point(det->p[0][0], det->p[0][1]),
-                 cv::Point(det->p[1][0], det->p[1][1]), cv::Scalar(0, 0xff, 0), 2);
-        line(frame, cv::Point(det->p[1][0], det->p[1][1]),
-                 cv::Point(det->p[2][0], det->p[2][1]), cv::Scalar(0, 0xff, 0), 2);
-        line(frame,cv::Point(det->p[2][0], det->p[2][1]),
-                 cv::Point(det->p[3][0], det->p[3][1]), cv::Scalar(0, 0xff, 0), 2);
-        line(frame, cv::Point(det->p[3][0], det->p[3][1]),
-                 cv::Point(det->p[0][0], det->p[0][1]), cv::Scalar(0, 0xff, 0), 2);
-        putText(frame, std::to_string(det->id), cv::Point(det->c[0], det->c[1]), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0xff, 0), 2);
+        line(frame,cv::Point((int)det->p[0][0], (int)det->p[0][1]),
+                 cv::Point((int)det->p[1][0], (int)det->p[1][1]), color, 2);
+        line(frame, cv::Point((int)det->p[1][0], (int)det->p[1][1]),
+                 cv::Point((int)det->p[2][0], (int)det->p[2][1]), color, 2);
+        line(frame,cv::Point((int)det->p[2][0], (int)det->p[2][1]),
+                 cv::Point((int)det->p[3][0], (int)det->p[3][1]), color, 2);
+        line(frame, cv::Point((int)det->p[3][0], (int)det->p[3][1]),
+                 cv::Point((int)det->p[0][0], (int)det->p[0][1]), color, 2);
+        putText(frame, std::to_string((int)det->id), cv::Point((int)det->c[0], (int)det->c[1]), cv::FONT_HERSHEY_SIMPLEX, 1, color, 2);
     }
 }
 
@@ -106,20 +114,48 @@ void mytag::clean() {
     apriltag_detections_destroy(detections);
 }
 
-int mytag::getTag0ID() {
-    if (zarray_size(detections) > 0) {
+int mytag::getClosetTagIndex() {
+    if(zarray_size(detections)) {
+        auto getDistance = [=](const double point1[2], const double point2[2]) {
+            return (point1[0] - point2[0]) * (point1[0] - point2[0]) +
+                   (point1[1] - point2[1]) * (point1[1] - point2[1]);
+        };
+        auto getTagLongestLine = [=](apriltag_detection_t *det) {
+            double line1 = getDistance(det->p[0], det->p[1]);
+            double line2 = getDistance(det->p[1], det->p[2]);
+            double line3 = getDistance(det->p[2], det->p[3]);
+            double line4 = getDistance(det->p[3], det->p[0]);
+            return std::max(std::max(line1, line2), std::max(line3, line4));
+        };
+        auto TagLongestLine = 0.0;
+        closestTagIndex = 0;
+        for (int index = 0; index < zarray_size(detections); index++) {
+            apriltag_detection_t *det;
+            zarray_get(detections, index, &det);
+            if (getTagLongestLine(det) > TagLongestLine) {
+                closestTagIndex = index;
+                TagLongestLine = getTagLongestLine(det);
+            }
+        }
+        return closestTagIndex;
+    }
+    return -1;
+}
+
+int mytag::getClosetTagID() {
+    if (zarray_size(detections)) {
         apriltag_detection_t *det;
-        zarray_get(detections, 0, &det);
+        zarray_get(detections, closestTagIndex, &det);
         return det->id;
     }
     return -1;
 }
 
 // t是距离系数，自行测量实际距离调整t
-double mytag::getTag0Distance(double t) {
-    if (zarray_size(detections) > 0) {
+double mytag::getClosetTagDistance(double t) {
+    if (zarray_size(detections)) {
         apriltag_detection_t *det;
-        zarray_get(detections, 0, &det);
+        zarray_get(detections, closestTagIndex, &det);
         auto H = det->H;
         // ss是一个缩放因子
         double ss = 0.5;
@@ -133,13 +169,13 @@ double mytag::getTag0Distance(double t) {
 
         // 相机内参矩阵 K
         cv::Mat Kmat = (cv::Mat_<double>(3, 3) <<
-            700, 0, 0,
-            0, 700, 0,
+            108, 0, 80,
+            0, 108, 60,
             0, 0, 1);
 
         // 畸变系数
-        cv::Mat disCoeffs = cv::Mat::zeros(4, 1, CV_64F);
-
+//        cv::Mat disCoeffs = (cv::Mat_<double>(5, 1) << -0.03814017,  0.29592995, -0.00294403,  0.00292109, -0.47267434);
+        cv::Mat disCoeffs = (cv::Mat_<double>(5, 1) << 0,0,0,0,0);
         // 输入点
         cv::Mat ipoints = (cv::Mat_<double>(4, 2) <<
             -1, -1,
