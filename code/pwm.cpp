@@ -1,95 +1,99 @@
 //
-// Created by EiveLL on 25-1-21.
+// Created by ashkore on 25-2-9.
 //
-
 #include "pwm.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <unistd.h>
-#include <cassert>
 
-int period_ns_global = 0;
+PWM::PWM(int pwmNum)
+    : base_addr(PWM_BASE_ADDR + pwmNum * PWM_OFFSET),
+      period_ns(0),
+      duty_ns(0),
+      current_polarity(POLARITY_INVERTED) {
+    // æ˜ å°„å¯„å­˜å™¨
+    ctrl_reg = map_register(base_addr + CTRL_REG_OFFSET, PAGE_SIZE);
+    duty_reg = map_register(base_addr + DUTY_REG_OFFSET, PAGE_SIZE);
+    period_reg = map_register(base_addr + PERIOD_REG_OFFSET, PAGE_SIZE);
+    init();
+}
 
-int get_pwmchip(pwm_channel_enum tim_pin) {
-    switch (tim_pin) {
-        case PWM_TIM0_GPIO64: return 0;
-        case PWM_TIM1_GPIO65: return 1;
-        case PWM_TIM2_GPIO66: return 2;
-        case PWM_TIM3_GPIO67: return 3;
-        default:
-            std::cerr << "Invalid tim_pin value" << std::endl;
-        return -1;
+PWM::~PWM() {
+    disable();
+    munmap(ctrl_reg, PAGE_SIZE);
+    munmap(duty_reg, PAGE_SIZE);
+    munmap(period_reg, PAGE_SIZE);
+}
+
+void PWM::init() {
+    uint32_t ctrl = REG_READ(ctrl_reg);
+    ctrl &= ~CTRL_EN;               // EN=0 ç¦ç”¨PWM
+    ctrl |= CTRL_INVERT;            // INVERT=1 åå‘è¾“å‡º
+    ctrl &= ~CTRL_OE;               // OE=0 å¯ç”¨è¾“å‡º
+    REG_WRITE(ctrl_reg, ctrl);
+}
+
+// è®¾ç½®é¢‘ç‡ï¼ˆå•ä½ï¼šHzï¼‰
+void PWM::set_frequency(uint32_t freq_hz) {
+    if (freq_hz == 0) return;
+    period_ns = (float)1'000'000'000 / (float)freq_hz; // è½¬æ¢ä¸ºns
+    update_period();
+}
+
+// è®¾ç½®å ç©ºæ¯”ï¼ˆ0~PWM_DUTY_MAXï¼‰
+void PWM::set_duty(uint32_t duty) {
+    if (duty > PWM_DUTY_MAX) duty = PWM_DUTY_MAX;
+    duty_ns = period_ns / PWM_DUTY_MAX * (float)duty;
+    update_duty();
+}
+
+// æ›´æ–°å‘¨æœŸå¯„å­˜å™¨
+void PWM::update_period() {
+    auto val = (uint32_t)(period_ns / 10);
+    uint32_t reg_value = (val == 0) ? 1 : val;
+    REG_WRITE(period_reg, reg_value);
+}
+
+// æ›´æ–°å ç©ºæ¯”å¯„å­˜å™¨
+void PWM::update_duty() {
+    auto val = (uint32_t)(duty_ns / 10);
+    uint32_t reg_value = (val == 0) ? 1 : val;
+    REG_WRITE(duty_reg, reg_value);
+}
+
+// è®¾ç½®ææ€§
+void PWM::set_polarity(enum Polarity polarity) {
+    current_polarity = polarity;
+    update_polarity();
+}
+
+void PWM::update_polarity() {
+    uint32_t ctrl = REG_READ(ctrl_reg);
+    if (current_polarity == POLARITY_INVERTED) {
+        ctrl |= CTRL_INVERT;
+    } else {
+        ctrl &= ~CTRL_INVERT;
     }
+    REG_WRITE(ctrl_reg, ctrl);
 }
 
-void pwm_init(pwm_channel_enum tim_pin, uint32_t freq, uint32_t duty) {
-    assert(duty <= PWM_DUTY_MAX && "Duty cycle exceeds maximum value");
+void PWM::enable() {
+    // å…ˆå†™å…¥å‘¨æœŸå’Œå ç©ºæ¯”
+    update_period();
+    update_duty();
 
-    int pwmchip = get_pwmchip(tim_pin);
-    if (pwmchip == -1) return;
-
-    // È¡Ïûµ¼³ö PWM Í¨µÀ
-    std::string unexportCommand = "echo 0 > /sys/class/pwm/pwmchip" + std::to_string(pwmchip) + "/unexport";
-    std::cout << "Executing: " << unexportCommand << std::endl;
-    system(unexportCommand.c_str());
-
-    // µ¼³ö PWM Í¨µÀ
-    std::string exportCommand = "echo 0 > /sys/class/pwm/pwmchip" + std::to_string(pwmchip) + "/export";
-    std::cout << "Executing: " << exportCommand << std::endl;
-    system(exportCommand.c_str());
-
-    // ½«ÆµÂÊ×ª»»ÎªÄÉÃëÖÜÆÚ
-    period_ns_global = CMU_CLK_FREQ / freq;
-
-    std::string periodCommand = "echo " + std::to_string(period_ns_global) + " > /sys/class/pwm/pwmchip" + std::to_string(pwmchip) + "/pwm" + std::to_string(tim_pin) + "/period";
-    std::cout << "Executing: " << periodCommand << std::endl;
-    system(periodCommand.c_str());
-
-    int duty_ns = period_ns_global * duty / PWM_DUTY_MAX;
-
-    std::string dutyCommand = "echo " + std::to_string(duty_ns) + " > /sys/class/pwm/pwmchip" + std::to_string(pwmchip) + "/pwm" + std::to_string(tim_pin) + "/duty_cycle";
-    std::cout << "Executing: " << dutyCommand << std::endl;
-    system(dutyCommand.c_str());
-
-    std::string enableCommand = "echo 1 > /sys/class/pwm/pwmchip" + std::to_string(pwmchip) + "/pwm" + std::to_string(tim_pin) + "/enable";
-    std::cout << "Executing: " << enableCommand << std::endl;
-    system(enableCommand.c_str());
+    uint32_t ctrl = REG_READ(ctrl_reg);
+    ctrl |= CTRL_EN;
+    REG_WRITE(ctrl_reg, ctrl);
 }
 
-void pwm_set_duty(pwm_channel_enum tim_pin, uint32_t duty) {
-    assert(duty <= PWM_DUTY_MAX && "Duty cycle exceeds maximum value");
-
-    int pwmchip = get_pwmchip(tim_pin);
-    if (pwmchip == -1) return;
-
-    // ¼ÆËã¸ßµçÆ½µÄ³ÖĞøÊ±¼ä
-    int high_level_ns = period_ns_global * duty / PWM_DUTY_MAX;
-    // ¼ÆËãµÍµçÆ½µÄ³ÖĞøÊ±¼ä
-    int low_level_ns = period_ns_global - high_level_ns;
-
-    std::string dutyCommand = "echo " + std::to_string(low_level_ns) + " > /sys/class/pwm/pwmchip" + std::to_string(pwmchip) + "/pwm" + std::to_string(tim_pin) + "/duty_cycle";
-    system(dutyCommand.c_str());
-}
-
-void pwm_test(pwm_channel_enum pwm_pin, uint32_t freq) {
-    uint32_t initial_duty = 0;
-    const uint32_t step = 100; // Ã¿´ÎÔö¼Ó»ò¼õÉÙµÄ²½³¤
-    const uint32_t delay = 4000000 / (PWM_DUTY_MAX / step); // Ã¿²½µÄÑÓ³ÙÊ±¼ä£¬È·±£4ÃëÄÚÍê³É
-
-    pwm_init(pwm_pin, freq, initial_duty); // ³õÊ¼»¯ÆµÂÊºÍ³õÊ¼Õ¼¿Õ±È
-
-    while (true) {
-        // Õ¼¿Õ±È´Ó0Ôö¼Óµ½×î´óÖµ
-        for (uint32_t duty = 0; duty < PWM_DUTY_MAX - step; duty += step) {
-            pwm_set_duty(pwm_pin, duty);
-            usleep(delay); // ÑÓ³Ù
-        }
-
-        // Õ¼¿Õ±È´Ó×î´óÖµ¼õĞ¡µ½0
-        for (uint32_t duty = PWM_DUTY_MAX; duty > step; duty -= step) {
-            pwm_set_duty(pwm_pin, duty);
-            usleep(delay); // ÑÓ³Ù
-        }
+void PWM::disable() {
+    // æ ¹æ®ææ€§è®¾ç½®å ç©ºæ¯”ä¸º0æˆ–æ»¡å‘¨æœŸ
+    if (current_polarity == POLARITY_NORMAL) {
+        REG_WRITE(duty_reg, 0); // æ­£å¸¸ææ€§ä¸‹ç¦ç”¨è¾“å‡ºä½ç”µå¹³
+    } else {
+        auto val = (uint32_t)(period_ns / 10);
+        REG_WRITE(duty_reg, val); // åå‘ææ€§ä¸‹ç¦ç”¨è¾“å‡ºé«˜ç”µå¹³
     }
+
+    uint32_t ctrl = REG_READ(ctrl_reg);
+    ctrl &= ~CTRL_EN;
+    REG_WRITE(ctrl_reg, ctrl);
 }

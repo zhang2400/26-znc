@@ -5,14 +5,21 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// ¶æ»úÅäÖÃ
+enum PWM_Pin {
+    PWM0_GPIO64 = 0,
+    PWM1_GPIO65 = 1,
+    PWM2_GPIO66 = 2,
+    PWM3_GPIO67 = 3
+};
+
+// èˆµæœºé…ç½®
 #define SERVO_MOTOR_DUTY(x)         ((float)PWM_DUTY_MAX/(1000.0/(float)SERVO_MOTOR_FREQ)*(0.5+(float)(x)/90.0))
 
-#define SERVO_MOTOR_L_MAX           (70)             // ¶¨ÒåÖ÷°åÉÏ¶æ»ú»î¶¯·¶Î§ ½Ç¶È
-#define SERVO_MOTOR_R_MAX           (100)              // ¶¨ÒåÖ÷°åÉÏ¶æ»ú»î¶¯·¶Î§ ½Ç¶È
-#define SERVO_MOTOR_MID             (85)              // ¶¨ÒåÖ÷°åÉÏ¶æ»úÖÐ¼äÎ»ÖÃ ½Ç¶È
+#define SERVO_MOTOR_L_MAX           (70)             // å®šä¹‰ä¸»æ¿ä¸Šèˆµæœºæ´»åŠ¨èŒƒå›´ è§’åº¦
+#define SERVO_MOTOR_R_MAX           (100)              // å®šä¹‰ä¸»æ¿ä¸Šèˆµæœºæ´»åŠ¨èŒƒå›´ è§’åº¦
+#define SERVO_MOTOR_MID             (85)              // å®šä¹‰ä¸»æ¿ä¸Šèˆµæœºä¸­é—´ä½ç½® è§’åº¦
 
-#define SERVO_MOTOR_PWM             (PWM_TIM3_GPIO67)   // ¶¨ÒåÖ÷°åÉÏ¶æ»ú¶ÔÓ¦Òý½Å
-#define SERVO_MOTOR_FREQ            (333)              // ¶¨ÒåÖ÷°åÉÏ¶æ»úÆµÂÊ
+#define SERVO_MOTOR_PWM             (PWM3_GPIO67)                 // å®šä¹‰ä¸»æ¿ä¸Šèˆµæœºå¯¹åº”å¼•è„š
+#define SERVO_MOTOR_FREQ            (333)              // å®šä¹‰ä¸»æ¿ä¸Šèˆµæœºé¢‘çŽ‡
 
 #endif //CONFIG_H

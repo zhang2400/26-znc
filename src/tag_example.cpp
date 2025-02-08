@@ -7,13 +7,10 @@
 #include <mytag.h>
 
 int tag_test() {
-    auto cap = cv::VideoCapture(0);
-    if (!cap.isOpened()) {
-        std::cerr << "Error: Cannot open camera" << std::endl;
-        return 1;
-    }
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    auto cap = cv::VideoCapture();
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 160);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 120);
+    cap.open(0);
     cv::Mat frame;
     cv::Mat gray;
 

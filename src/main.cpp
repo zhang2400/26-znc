@@ -4,7 +4,7 @@
  * @LastEditors: ilikara 3435193369@qq.com
  * @LastEditTime: 2024-12-12 06:21:45
  * @FilePath: /ls2k0300_peripheral_library/src/main.cpp
- * @Description: ²âÊÔÓÃÖ÷³ÌĞò
+ * @Description: æµ‹è¯•ç”¨ä¸»ç¨‹åº
  *
  * Copyright (c) 2024 by ilikara 3435193369@qq.com, All Rights Reserved.
  */
@@ -19,31 +19,69 @@
 #include <iostream>
 #include "icm20602.h"
 
+#include "servo.h"
+#include "log.h"
 ENCODER* L_Encoder = nullptr;
 ENCODER* R_Encoder = nullptr;
-
-const char* i2c_dev = "/dev/i2c-0";
-int fd = open(i2c_dev, O_RDWR);
+int fd;
 
 void image_processing_loop() {
-    // while (true) {
-        pwm_test(PWM_TIM0_GPIO64, 15000);
-    // }
+    PWM pwm0(PWM0_GPIO64);
+    pwm0.set_frequency(1000);
+    pwm0.set_duty(1234);
+    pwm0.enable();
+//
+//    PWM pwm1(1);
+//    pwm1.set_frequency(2000);
+//    pwm1.set_duty(680);
+//    pwm1.enable();
+//
+//    PWM pwm2(2);
+//    pwm2.set_frequency(30000);
+//    pwm2.set_duty(5000);
+//    pwm2.enable();
+//
+//    PWM pwm3(3);
+//    pwm3.set_frequency(4000);
+//    pwm3.set_duty(710);
+//    pwm3.enable();
+//
+    log_init("app.logcat");
+    Servo servo;
+//
+//    pwm0.disable();
+//    pwm1.disable();
+//    pwm2.disable();
+//    pwm3.disable();
+    while (true) {
+        for(int i = SERVO_MOTOR_L_MAX; i <= SERVO_MOTOR_R_MAX; i++) {
+            MEASURE_TIME("set_angle", {
+                servo.set_angle(i);
+            });
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        for(int i = SERVO_MOTOR_R_MAX; i >= SERVO_MOTOR_L_MAX; i--) {
+            MEASURE_TIME("set_angle", {
+                servo.set_angle(i);
+            });
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
 }
 
 int main()
 {
     icm20602_init(fd);
-    // ´´½¨GPIO¶ÔÏó£¬¼ÙÉèÊ¹ÓÃGPIO±àºÅÎª73
+    // åˆ›å»ºGPIOå¯¹è±¡ï¼Œå‡è®¾ä½¿ç”¨GPIOç¼–å·ä¸º73
     GPIO gpio73(73);
 
-    // ÉèÖÃGPIO·½ÏòÎªÊä³ö
+    // è®¾ç½®GPIOæ–¹å‘ä¸ºè¾“å‡º
     if (!gpio73.setDirection("out")) {
         std::cerr << "Failed to set GPIO direction" << std::endl;
         return 1;
     }
 
-    // ÉèÖÃGPIOÊä³öÖµÎªµÍµçÆ½
+    // è®¾ç½®GPIOè¾“å‡ºå€¼ä¸ºä½ç”µå¹³
     if (!gpio73.setValue(false)) {
         std::cerr << "Failed to set GPIO value" << std::endl;
         return 1;
@@ -52,7 +90,7 @@ int main()
     int pwmChannel = 2;
     int dirGPIO = 73;
 
-    // ´´½¨±àÂëÆ÷¶ÔÏó
+    // åˆ›å»ºç¼–ç å™¨å¯¹è±¡
     L_Encoder = new ENCODER(pwmChannel, dirGPIO);
     R_Encoder = new ENCODER(pwmChannel, dirGPIO);
 
@@ -62,13 +100,10 @@ int main()
     PWM_GTIM test3(89, 0b11, 3, 8000, 4500);
     test3.enable();
 
-    pwm_init(PWM_TIM0_GPIO64, 15000, 5000);
-    pwm_set_duty(PWM_TIM0_GPIO64, 2500);
-
     std::thread timerThread(pit_init_ms, 10, timer_interrupt_handler);
-    timerThread.detach();  // ·ÖÀë¶¨Ê±Æ÷Ïß³Ì
-
-    // Ö÷Ïß³ÌÖ´ĞĞÍ¼Ïñ´¦ÀíÈÎÎñ
+    timerThread.detach();  // åˆ†ç¦»å®šæ—¶å™¨çº¿ç¨‹
+//
+//    // ä¸»çº¿ç¨‹æ‰§è¡Œå›¾åƒå¤„ç†ä»»åŠ¡
     image_processing_loop();
 
     return 0;
