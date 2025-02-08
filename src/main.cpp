@@ -17,9 +17,13 @@
 #include "pit_sw.h"
 #include "encoder.h"
 #include <iostream>
+#include "icm20602.h"
 
 ENCODER* L_Encoder = nullptr;
 ENCODER* R_Encoder = nullptr;
+
+const char* i2c_dev = "/dev/i2c-0";
+int fd = open(i2c_dev, O_RDWR);
 
 void image_processing_loop() {
     // while (true) {
@@ -29,6 +33,7 @@ void image_processing_loop() {
 
 int main()
 {
+    icm20602_init(fd);
     // 创建GPIO对象，假设使用GPIO编号为73
     GPIO gpio73(73);
 
@@ -56,7 +61,6 @@ int main()
 
     PWM_GTIM test3(89, 0b11, 3, 8000, 4500);
     test3.enable();
-
 
     pwm_init(PWM_TIM0_GPIO64, 15000, 5000);
     pwm_set_duty(PWM_TIM0_GPIO64, 2500);

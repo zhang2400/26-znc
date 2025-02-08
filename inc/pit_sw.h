@@ -15,10 +15,12 @@
 #include <sched.h>
 #include <sys/timerfd.h>
 #include "encoder.h"
+#include "icm20602.h"
 
 // 定义回调函数类型，用户可自定义自己的中断处理逻辑
 typedef void (*TimerCallback)(void);
 
+void pit_callback(void);
 void timer_interrupt_handler(void);
 int pit_init_ms(uint32_t time_ms, TimerCallback cb);
 int pit_init(uint32_t time_us, TimerCallback cb);
@@ -28,4 +30,5 @@ uint64_t time_diff_ns(const timespec& start, const timespec& end);
 extern ENCODER* L_Encoder;
 extern ENCODER* R_Encoder;
 
+extern int fd;
 #endif //PIT_SW_H
