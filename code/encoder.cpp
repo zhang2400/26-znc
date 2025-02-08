@@ -25,7 +25,7 @@ ENCODER::ENCODER(int pwmNum, int gpioNum) : base_addr(PWM_BASE_ADDR + pwmNum * P
 }
 
 // 析构函数
-ENCODER::~ENCODER(void)
+ENCODER::~ENCODER()
 {
     // directionGPIO.~GPIO();
     munmap(control_buffer, PAGE_SIZE);
@@ -34,7 +34,7 @@ ENCODER::~ENCODER(void)
 }
 
 // 初始化PWM控制器为计数模式
-void ENCODER::PWM_Init(void)
+void ENCODER::PWM_Init()
 {
     uint32_t control_reg = 0;
 
@@ -48,7 +48,7 @@ void ENCODER::PWM_Init(void)
 }
 
 // 清空计数器
-void ENCODER::reset_counter(void)
+void ENCODER::reset_counter()
 {
     uint32_t control_reg = REG_READ(control_buffer);
     control_reg |= COUNTER_RESET_BIT;
@@ -56,7 +56,7 @@ void ENCODER::reset_counter(void)
 }
 
 // 返回编码器的RPS
-double ENCODER::pulse_counter_update(void)
+double ENCODER::pulse_counter_update()
 {
     double value = 100000000.0 / REG_READ(full_buffer) / ENCODER_PPR * (directionGPIO.readValue() * 2 - 1);
     return value;

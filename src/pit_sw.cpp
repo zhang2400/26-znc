@@ -38,7 +38,7 @@ int pit_init_ms(uint32_t time_ms, TimerCallback cb) {
 int pit_init(uint32_t time_us, TimerCallback cb) {
     int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
     if (timer_fd == -1) {
-        std::cerr << "timerfd_create Ê§°Ü: " << strerror(errno) << std::endl;
+        std::cerr << "timerfd_create å¤±è´¥: " << strerror(errno) << std::endl;
         return -1;
     }
 
@@ -48,40 +48,40 @@ int pit_init(uint32_t time_us, TimerCallback cb) {
     timer_spec.it_interval = timer_spec.it_value;
 
     if (timerfd_settime(timer_fd, TFD_TIMER_ABSTIME, &timer_spec, nullptr) == -1) {
-        std::cerr << "timerfd_settime Ê§°Ü: " << strerror(errno) << std::endl;
+        std::cerr << "timerfd_settime å¤±è´¥: " << strerror(errno) << std::endl;
         close(timer_fd);
         return -1;
     }
 
-    // °ó¶¨µ½¸ßÐÔÄÜºËÐÄ
+    // ç»‘å®šåˆ°é«˜æ€§èƒ½æ ¸å¿ƒ
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(0, &cpuset);
     sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
 
-    // Ìá¸ß½ø³ÌÓÅÏÈ¼¶
+    // æé«˜è¿›ç¨‹ä¼˜å…ˆçº§
     struct sched_param param;
     param.sched_priority = 99;
     sched_setscheduler(0, SCHED_FIFO, &param);
 
-    // ÊÂ¼þÑ­»·
+    // äº‹ä»¶å¾ªçŽ¯
     while (true) {
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &timer_spec.it_value, nullptr);
 
         uint64_t expirations;
         if (read(timer_fd, &expirations, sizeof(expirations)) != sizeof(expirations)) {
-            std::cerr << "read ¶¨Ê±Æ÷Ê§°Ü: " << strerror(errno) << std::endl;
+            std::cerr << "read å®šæ—¶å™¨å¤±è´¥: " << strerror(errno) << std::endl;
             continue;
         }
 
-        cb();  // µ÷ÓÃ»Øµ÷
+        cb();  // è°ƒç”¨å›žè°ƒ
     }
 
     close(timer_fd);
     return timer_fd;
 }
 
-// Ê±¼äÏà¹Ø¸¨Öúº¯Êý
+// æ—¶é—´ç›¸å…³è¾…åŠ©å‡½æ•°
 timespec get_current_time() {
     timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);

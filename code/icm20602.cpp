@@ -108,9 +108,10 @@ void icm20602_read_all(int fd, ICM20602_t *DataStruct, double dt){
 }
 
 int icm20602_init(int fd) {
+    const char* i2c_dev = "/dev/i2c-0";
+    fd = open(i2c_dev, O_RDWR);
     if (fd < 0) {
         return 3;
-        std::cerr << "Failed to set GPIO direction" << std::endl;
     }
 
     if (ioctl(fd, I2C_SLAVE, 0x68) < 0) {
@@ -118,7 +119,7 @@ int icm20602_init(int fd) {
         return 4;
     }
 
-    // ÅäÖÃ´«¸ÐÆ÷Îª¼ÓËÙ¶È¼ÆÄ£Ê½
+    // é…ç½®ä¼ æ„Ÿå™¨ä¸ºåŠ é€Ÿåº¦è®¡æ¨¡å¼
     uint8_t config[2] = {0x6B, 0x80};
     write(fd, config, 2);
     usleep(3000);

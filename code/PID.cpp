@@ -5,18 +5,18 @@
 #include "PID.h"
 
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êý¼ò½é     PIDÎ»ÖÃÊ½³õÊ¼»¯
-// ²ÎÊýËµÃ÷     Kp  ±ÈÀýÏµÊý
-// ²ÎÊýËµÃ÷     Kp2  ±ÈÀýÏµÊý2
-// ²ÎÊýËµÃ÷     Ki  »ý·ÖÏµÊý
-// ²ÎÊýËµÃ÷     Kd  Î¢·ÖÏµÊý
-// ²ÎÊýËµÃ÷     GzKd  ½ÇËÙ¶ÈÏµÊý
-// ²ÎÊýËµÃ÷     outmax  Êä³ö×î´óÖµ
-// ²ÎÊýËµÃ÷     outmin  Êä³ö×îÐ¡Öµ
-// ²ÎÊýËµÃ÷     use_lowpass_filter  ÊÇ·ñÊ¹ÓÃµÍÍ¨ÂË²¨
-// ²ÎÊýËµÃ÷     lowpass_filter_factor  µÍÍ¨ÂË²¨ÏµÊý
-// ·µ»Ø²ÎÊý     PID_Position
-// ±¸×¢ÐÅÏ¢     PIDÎ»ÖÃÊ½³õÊ¼»¯
+// å‡½æ•°ç®€ä»‹     PIDä½ç½®å¼åˆå§‹åŒ–
+// å‚æ•°è¯´æ˜Ž     Kp  æ¯”ä¾‹ç³»æ•°
+// å‚æ•°è¯´æ˜Ž     Kp2  æ¯”ä¾‹ç³»æ•°2
+// å‚æ•°è¯´æ˜Ž     Ki  ç§¯åˆ†ç³»æ•°
+// å‚æ•°è¯´æ˜Ž     Kd  å¾®åˆ†ç³»æ•°
+// å‚æ•°è¯´æ˜Ž     GzKd  è§’é€Ÿåº¦ç³»æ•°
+// å‚æ•°è¯´æ˜Ž     outmax  è¾“å‡ºæœ€å¤§å€¼
+// å‚æ•°è¯´æ˜Ž     outmin  è¾“å‡ºæœ€å°å€¼
+// å‚æ•°è¯´æ˜Ž     use_lowpass_filter  æ˜¯å¦ä½¿ç”¨ä½Žé€šæ»¤æ³¢
+// å‚æ•°è¯´æ˜Ž     lowpass_filter_factor  ä½Žé€šæ»¤æ³¢ç³»æ•°
+// è¿”å›žå‚æ•°     PID_Position
+// å¤‡æ³¨ä¿¡æ¯     PIDä½ç½®å¼åˆå§‹åŒ–
 //-------------------------------------------------------------------------------------------------------------------
 PID_Position PID_Position_Init(float32 Kp, float32 Kp2, float32 Ki, float32 Kd,
                                float32 GzKd, float32 outmax, float32 outmin, uint8 use_lowpass_filter,
@@ -38,13 +38,13 @@ PID_Position PID_Position_Init(float32 Kp, float32 Kp2, float32 Ki, float32 Kd,
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êý¼ò½é     PIDÎ»ÖÃÊ½¼ÆËã
-// ²ÎÊýËµÃ÷     pid  PIDÎ»ÖÃÊ½
-// ²ÎÊýËµÃ÷     input_value  ÊäÈëÖµ
-// ²ÎÊýËµÃ÷     gyroz_value  ½ÇËÙ¶ÈÖµ
-// ²ÎÊýËµÃ÷     setpoint  Éè¶¨Öµ
-// ·µ»Ø²ÎÊý     float32
-// ±¸×¢ÐÅÏ¢     PIDÎ»ÖÃÊ½¼ÆËã,ÊÊÓÃÓÚ¶æ»ú¿ØÖÆ,·µ»ØÊä³öÖµ
+// å‡½æ•°ç®€ä»‹     PIDä½ç½®å¼è®¡ç®—
+// å‚æ•°è¯´æ˜Ž     pid  PIDä½ç½®å¼
+// å‚æ•°è¯´æ˜Ž     input_value  è¾“å…¥å€¼
+// å‚æ•°è¯´æ˜Ž     gyroz_value  è§’é€Ÿåº¦å€¼
+// å‚æ•°è¯´æ˜Ž     setpoint  è®¾å®šå€¼
+// è¿”å›žå‚æ•°     float32
+// å¤‡æ³¨ä¿¡æ¯     PIDä½ç½®å¼è®¡ç®—,é€‚ç”¨äºŽèˆµæœºæŽ§åˆ¶,è¿”å›žè¾“å‡ºå€¼
 //-------------------------------------------------------------------------------------------------------------------
 float32 PID_Position_Calc(PID_Position *pid, float32 input_value, float32 gyroz_value, float32 setpoint) {
     float32 error = setpoint - input_value;
@@ -53,21 +53,21 @@ float32 PID_Position_Calc(PID_Position *pid, float32 input_value, float32 gyroz_
     pid->last_error = error;
     float32 output = pid->Kp * error + pid->Kp2 * error * fabsf(error) + pid->Ki * pid->integral + pid->Kd * derivative + pid->GzKd * gyroz_value;
 
-    // »ý·ÖÏÞ·ù
+    // ç§¯åˆ†é™å¹…
     if(pid->integral > pid->outmax/9){
         pid->integral = pid->outmax/9;
     } else if(pid->integral < pid->outmin/9){
         pid->integral = pid->outmin/9;
     }
 
-    // Êä³öÏÞ·ù
+    // è¾“å‡ºé™å¹…
     if(output > pid->outmax){
         output = pid->outmax;
     } else if(output < pid->outmin){
         output = pid->outmin;
     }
 
-    // µÍÍ¨ÂË²¨
+    // ä½Žé€šæ»¤æ³¢
     if(pid->use_lowpass_filter){
         output = pid->last_out * pid->lowpass_filter_factor + output * (1 - pid->lowpass_filter_factor);
     }
@@ -78,16 +78,16 @@ float32 PID_Position_Calc(PID_Position *pid, float32 input_value, float32 gyroz_
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êý¼ò½é     PIDÔöÁ¿Ê½³õÊ¼»¯
-// ²ÎÊýËµÃ÷     Kp  ±ÈÀýÏµÊý
-// ²ÎÊýËµÃ÷     Ki  »ý·ÖÏµÊý
-// ²ÎÊýËµÃ÷     Kd  Î¢·ÖÏµÊý
-// ²ÎÊýËµÃ÷     outmax  Êä³ö×î´óÖµ
-// ²ÎÊýËµÃ÷     outmin  Êä³ö×îÐ¡Öµ
-// ²ÎÊýËµÃ÷     use_lowpass_filter  ÊÇ·ñÊ¹ÓÃµÍÍ¨ÂË²¨
-// ²ÎÊýËµÃ÷     lowpass_filter_factor  µÍÍ¨ÂË²¨ÏµÊý
-// ·µ»Ø²ÎÊý     PID_Incremental
-// ±¸×¢ÐÅÏ¢     PIDÔöÁ¿Ê½³õÊ¼»¯
+// å‡½æ•°ç®€ä»‹     PIDå¢žé‡å¼åˆå§‹åŒ–
+// å‚æ•°è¯´æ˜Ž     Kp  æ¯”ä¾‹ç³»æ•°
+// å‚æ•°è¯´æ˜Ž     Ki  ç§¯åˆ†ç³»æ•°
+// å‚æ•°è¯´æ˜Ž     Kd  å¾®åˆ†ç³»æ•°
+// å‚æ•°è¯´æ˜Ž     outmax  è¾“å‡ºæœ€å¤§å€¼
+// å‚æ•°è¯´æ˜Ž     outmin  è¾“å‡ºæœ€å°å€¼
+// å‚æ•°è¯´æ˜Ž     use_lowpass_filter  æ˜¯å¦ä½¿ç”¨ä½Žé€šæ»¤æ³¢
+// å‚æ•°è¯´æ˜Ž     lowpass_filter_factor  ä½Žé€šæ»¤æ³¢ç³»æ•°
+// è¿”å›žå‚æ•°     PID_Incremental
+// å¤‡æ³¨ä¿¡æ¯     PIDå¢žé‡å¼åˆå§‹åŒ–
 //-------------------------------------------------------------------------------------------------------------------
 PID_Incremental PID_Incremental_Init(float32 Kp, float32 Ki, float32 Kd, float32 outmax,
                                      float32 outmin, uint8 use_lowpass_filter,
@@ -109,12 +109,12 @@ PID_Incremental PID_Incremental_Init(float32 Kp, float32 Ki, float32 Kd, float32
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êý¼ò½é     PIDÔöÁ¿Ê½¼ÆËã
-// ²ÎÊýËµÃ÷     pid  PIDÔöÁ¿Ê½
-// ²ÎÊýËµÃ÷     input_value  ÊäÈëÖµ
-// ²ÎÊýËµÃ÷     setpoint  Éè¶¨Öµ
-// ·µ»Ø²ÎÊý     float32
-// ±¸×¢ÐÅÏ¢     PIDÔöÁ¿Ê½¼ÆËã,ÊÊÓÃÓÚµç»ú¿ØÖÆ,·µ»ØÊä³öÖµ
+// å‡½æ•°ç®€ä»‹     PIDå¢žé‡å¼è®¡ç®—
+// å‚æ•°è¯´æ˜Ž     pid  PIDå¢žé‡å¼
+// å‚æ•°è¯´æ˜Ž     input_value  è¾“å…¥å€¼
+// å‚æ•°è¯´æ˜Ž     setpoint  è®¾å®šå€¼
+// è¿”å›žå‚æ•°     float32
+// å¤‡æ³¨ä¿¡æ¯     PIDå¢žé‡å¼è®¡ç®—,é€‚ç”¨äºŽç”µæœºæŽ§åˆ¶,è¿”å›žè¾“å‡ºå€¼
 float32 PID_Incremental_Calc(PID_Incremental *pid, float32 input_value, float32 setpoint){
     pid->last_last_error = pid->last_error;
     pid->last_error = pid->error;
@@ -124,14 +124,14 @@ float32 PID_Incremental_Calc(PID_Incremental *pid, float32 input_value, float32 
 
     pid->out += output_increment;
 
-    // Êä³öÏÞ·ù
+    // è¾“å‡ºé™å¹…
     if(pid->out > pid->outmax){
         pid->out = pid->outmax;
     } else if(pid->out < pid->outmin){
         pid->out = pid->outmin;
     }
 
-    // µÍÍ¨ÂË²¨
+    // ä½Žé€šæ»¤æ³¢
     if(pid->use_lowpass_filter){
         pid->out = pid->last_out * pid->lowpass_filter_factor + pid->out * (1 - pid->lowpass_filter_factor);
     }

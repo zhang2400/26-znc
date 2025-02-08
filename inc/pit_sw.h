@@ -17,7 +17,7 @@
 #include "encoder.h"
 #include "icm20602.h"
 
-// 定义回调函数类型，用户可自定义自己的中断处理逻辑
+// 瀹氫箟鍥炶皟鍑芥暟绫诲瀷锛岀敤鎴峰彲鑷畾涔夎嚜宸辩殑涓柇澶勭悊閫昏緫
 typedef void (*TimerCallback)(void);
 
 void pit_callback(void);
