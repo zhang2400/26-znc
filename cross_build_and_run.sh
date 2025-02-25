@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ip="192.168.1.130"
+ip="192.168.5.72"
 username="loongson"
 toolchain_path="loongarch64-linux-gnu-"
 
