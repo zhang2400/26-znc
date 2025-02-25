@@ -21,6 +21,7 @@
 #include "vofa.h"
 #include <csignal>
 #include "pwm.h"
+#include "icm20602.h"
 #include "config.h"
 
 // 图像和传感器数据结构

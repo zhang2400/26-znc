@@ -5,6 +5,8 @@ const int timer_period = 10;  // 定时器周期(ms)
 std::atomic<bool> running{true};      // 控制线程运行标志
 cv::Mat frame;
 uint8_t image[120][160];
+const char* i2c_dev = "/dev/i2c-0";
+int fd = open(i2c_dev, O_RDWR);
 void* realtime_task(void* arg) {
     // 设置实时线程优先级
     auto vofa = VOFA("192.168.5.47", 1349);
@@ -61,6 +63,9 @@ void* realtime_task(void* arg) {
             memcpy(image, frame.data, 120 * 160);
             uint8_t pixel_value = image[60][80];
             vofa.printf("aaa:%d\n",pixel_value);
+
+            icm20602_read_all(fd, &icm20602, 0.01);
+            printf("AngleX: %f, AngleY: %f, AngleZ: %f\n", icm20602.KalmanAngleX, icm20602.KalmanAngleY, icm20602.AngleZ);
         }
     }
 
@@ -132,6 +137,7 @@ int main()
     }
     LOGW("MAIN", "Application starting...");
 
+    icm20602_init(fd);
 
     PWM pwm0(PWM0_GPIO64);
     pwm0.set_frequency(1000);

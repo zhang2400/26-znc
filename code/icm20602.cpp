@@ -5,6 +5,7 @@
 
 #define ABS(x) ((x) > 0 ? (x) : -(x))
 #define RAD_TO_DEG 57.295779513082320876798154814105
+float Gyro_Z_corrector = GYROZ_CORRECT_DEFAULT;
 
 Kalman_t KalmanX = {
     .Q_angle = 0.001f,
@@ -72,7 +73,7 @@ void icm20602_read_gyro(int fd, ICM20602_t *DataStruct){
     DataStruct->Gyro_Z_RAW = (data[4] << 8) | data[5];
     DataStruct->Gx = (float)DataStruct->Gyro_X_RAW / 16.4;
     DataStruct->Gy = (float)DataStruct->Gyro_Y_RAW / 16.4;
-    DataStruct->Gz = (float)DataStruct->Gyro_Z_RAW / 16.4;
+    DataStruct->Gz = (float)DataStruct->Gyro_Z_RAW / 16.4 - Gyro_Z_corrector;
 }
 
 void icm20602_read_all(int fd, ICM20602_t *DataStruct, double dt){
@@ -108,8 +109,6 @@ void icm20602_read_all(int fd, ICM20602_t *DataStruct, double dt){
 }
 
 int icm20602_init(int fd) {
-    const char* i2c_dev = "/dev/i2c-0";
-    fd = open(i2c_dev, O_RDWR);
     if (fd < 0) {
         return 3;
     }
