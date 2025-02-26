@@ -3,6 +3,8 @@
 //
 #include "pwm.h"
 
+#include <config.h>
+
 PWM::PWM(int pwmNum)
     : base_addr(PWM_BASE_ADDR + pwmNum * PWM_OFFSET),
       period_ns(0),

@@ -24,4 +24,6 @@ enum PWM_Pin {
 
 #define GYROZ_CORRECT_DEFAULT -0.2
 
+// 占空比最大值
+#define PWM_DUTY_MAX 10000
 #endif //CONFIG_H
