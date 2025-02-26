@@ -83,22 +83,16 @@ void PWM_GTIM::disable(void)
     REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) & ~(0x1 << (chNum * 4)));
 }
 
-// 设置周期（10 纳秒单位）
+// 设置周期（以10纳秒为单位）
 void PWM_GTIM::setPeriod(unsigned int period_10ns_)
 {
     period_10ns = period_10ns_;
     REG_WRITE(period_buffer, period_10ns);
 
-    // 强制更新 ARR
-    REG_WRITE(map_register(GTIM_BASE_ADDR + GTIM_EGR_OFFSET, PAGE_SIZE), 0x01);
-
-    // 更新占空比
-    unsigned int duty_ns = (unsigned int)(((uint64_t)period_10ns * duty_cycle_10ns) / 10000);
-    REG_WRITE(duty_cycle_buffer, duty_ns);
+    REG_WRITE(cnt_buffer, 0);
 }
 
-
-
+// 设置低电平时间（以10纳秒为单位）
 void PWM_GTIM::setDutyCycle(unsigned int duty_cycle_10ns_)
 {
     duty_cycle_10ns = duty_cycle_10ns_;
