@@ -18,8 +18,6 @@
 #define CTRL_OE     (1 << 3)
 #define CTRL_INVERT (1 << 9)
 
-// 占空比最大值
-#define PWM_DUTY_MAX 10000
 
 
 enum Polarity {
