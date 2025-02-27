@@ -35,4 +35,6 @@ enum Polarity {
 
 // 占空比最大值
 #define PWM_DUTY_MAX 10000
+
+#define WHEEL_MAX_DUTY              (5000)  // 电机最大占空比
 #endif //CONFIG_H

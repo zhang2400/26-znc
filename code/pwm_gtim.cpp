@@ -30,7 +30,7 @@ PWM_GTIM::PWM_GTIM(int gpio, int mux, int chNum_, float frequency, int duty_valu
     ccer_buffer = map_register(GTIM_BASE_ADDR + GTIM_CCER_OFFSET, PAGE_SIZE);
     cnt_buffer = map_register(GTIM_BASE_ADDR + GTIM_CNT_OFFSET, PAGE_SIZE);
 
-    // 配置 PWM 模式（确保 CHx 处于 PWM1 模式）
+    // 配置 PWM 模式（确保 CHx 处于 PWM1 模式）h
     unsigned int ccmr_val = REG_READ(ccmr_buffer[chNum / 2]);
     ccmr_val &= ~(0x7 << (chNum % 2 * 8 + 4));  // 清除
     ccmr_val |= (0x6 << (chNum % 2 * 8 + 4));   // 设置 PWM1 模式

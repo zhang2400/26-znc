@@ -9,6 +9,9 @@ const char* i2c_dev = "/dev/i2c-0";
 int fd = open(i2c_dev, O_RDWR);
 
 void* realtime_task(void* arg) {
+
+    BEEP beep(61);
+
     // 设置实时线程优先级
     auto vofa = VOFA("0.0.0.0", 1349);
     struct sched_param param = {.sched_priority = 99};
@@ -87,6 +90,9 @@ void *non_realtime_task(void *arg) {
     cv::Mat gray;
     double distance;
     std::vector<uchar> jpg;
+
+    icm20602_init(fd);
+
     while (running) {
             frame.copyTo(my_frame);
 //            MEASURE_TIME("convert gray", {
@@ -136,8 +142,6 @@ int main()
         return 1;
     }
     LOGW("MAIN", "Application starting...");
-
-    icm20602_init(fd);
 
     PWM pwm0(PWM0_GPIO64);
     pwm0.set_frequency(1000);

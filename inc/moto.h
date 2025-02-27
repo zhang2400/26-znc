@@ -8,11 +8,13 @@
 #include <pwm.h>
 #include <encoder.h>
 #include "GPIO.h"
+#include "config.h"
 
 class Moto {
 public:
     Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio);
-    void set_speed(int _speed);
+    ~Moto();
+    void set_speed(int duty);
     void update_speed();
     int speed;
 private:

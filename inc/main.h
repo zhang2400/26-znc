@@ -24,6 +24,7 @@
 #include "icm20602.h"
 #include "config.h"
 #include <pwm_gtim.h>
+#include <beep.h>
 
 // 图像和传感器数据结构
 struct FrameData {

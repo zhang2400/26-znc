@@ -3,7 +3,7 @@
 //
 
 #include "moto.h"
-#include "config.h"
+
 Moto::Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio)
     : motor(pwmNum), direction(dirgpio), encoder(encoderNum, encgpio), speed(0)
 {
@@ -12,26 +12,32 @@ Moto::Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio)
     motor.enable();
     direction.setDirection("out");
     direction.setValue(false);
-
 }
 
-void Moto::set_speed(int _speed)
+Moto::~Moto()
 {
-    if (_speed > PWM_DUTY_MAX) {
-        _speed = PWM_DUTY_MAX;
-    } else if (_speed < -PWM_DUTY_MAX) {
-        _speed = -PWM_DUTY_MAX;
+    motor.set_duty(0);
+    motor.disable();
+    direction.setValue(false);
+}
+
+void Moto::set_speed(int duty)
+{
+    if (duty > WHEEL_MAX_DUTY) {
+        duty = WHEEL_MAX_DUTY;
+    } else if (duty < -WHEEL_MAX_DUTY) {
+        duty = -WHEEL_MAX_DUTY;
     }
-    if (_speed > 0)
+    if (duty > 0)
     {
         direction.setValue(false);
     }
     else
     {
         direction.setValue(true);
-        _speed = -_speed;
+        duty = -duty;
     }
-    motor.set_duty(_speed);
+    motor.set_duty(duty);
 }
 
 void Moto::update_speed()
