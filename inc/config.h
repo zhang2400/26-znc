@@ -9,7 +9,16 @@ enum PWM_Pin {
     PWM0_GPIO64 = 0,
     PWM1_GPIO65 = 1,
     PWM2_GPIO66 = 2,
-    PWM3_GPIO67 = 3
+    PWM3_GPIO67 = 3,
+    GTIM1_GPIO88 = 88,
+    GTIM2_GPIO89 = 89,
+};
+
+#define PWM_DUTY_MAX 10000
+
+enum Polarity {
+    POLARITY_NORMAL,
+    POLARITY_INVERTED
 };
 
 // 舵机配置

@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
+#include "config.h"
 
 #include "register.h"
 
@@ -53,16 +54,20 @@ public:
 
     void enable(void);
     void disable(void);
-    void setPeriod(unsigned int period_10ns_);
-    void setDutyCycle(unsigned int duty_cycle_10ns_);
 
-    void setFrequency(float frequency);
-    void setDuty(uint32_t duty);
+
+    void set_frequency(uint32_t freq_hz);           // 设置频率（Hz）
+    void set_duty(uint32_t duty);      // 设置占空比（0~PWM_DUTY_MAX）
+
+    void update_period();
+    void update_duty();
 
 
     uint32_t period_10ns, duty_cycle_10ns;
 
 private:
+    float period_ns;        // 当前周期（ns）
+    float duty_ns;          // 当前占空比（ns）
     uint32_t chNum;
     void *ccmr_buffer[2];
     void *ccer_buffer;

@@ -1,7 +1,5 @@
 #include "pwm_gtim.h"
 
-#include <config.h>
-
 PWM_GTIM::PWM_GTIM(int gpio, int mux, int chNum_, float frequency, int duty_value)
     : chNum(chNum_ - 1)  // chNum 从 1 开始，需要减 1
 {
@@ -83,34 +81,32 @@ void PWM_GTIM::disable(void)
     REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) & ~(0x1 << (chNum * 4)));
 }
 
-// 设置周期（以10纳秒为单位）
-void PWM_GTIM::setPeriod(unsigned int period_10ns_)
-{
-    period_10ns = period_10ns_;
-    REG_WRITE(period_buffer, period_10ns);
-
-    REG_WRITE(cnt_buffer, 0);
+// 设置频率（单位：Hz）
+void PWM_GTIM::set_frequency(uint32_t freq_hz) {
+    if (freq_hz == 0) return;
+    period_ns = (float)1'000'000'000 / (float)freq_hz; // 转换为ns
+    update_period();
 }
 
-// 设置低电平时间（以10纳秒为单位）
-void PWM_GTIM::setDutyCycle(unsigned int duty_cycle_10ns_)
-{
-    duty_cycle_10ns = duty_cycle_10ns_;
-    REG_WRITE(duty_cycle_buffer, duty_cycle_10ns);
-
-    REG_WRITE(cnt_buffer, 0);
-}
-
-void PWM_GTIM::setFrequency(float frequency) {
-    
-    if (frequency == 0) return;
-    period_10ns = (float)1'000'000'000 / (float)frequency; // 转换为ns
-    setPeriod(period_10ns);
-}
-
-void PWM_GTIM::setDuty(uint32_t duty) {
+// 设置占空比（0~PWM_DUTY_MAX）
+void PWM_GTIM::set_duty(uint32_t duty) {
     if (duty > PWM_DUTY_MAX) duty = PWM_DUTY_MAX;
-    duty_cycle_10ns = period_10ns / PWM_DUTY_MAX * (float)duty;
-    setDutyCycle(duty_cycle_10ns);
+    duty_ns = period_ns / PWM_DUTY_MAX * (float)duty;
+    update_duty();
 }
+
+// 更新周期寄存器
+void PWM_GTIM::update_period() {
+    auto val = (uint32_t)(period_ns / 10);
+    uint32_t reg_value = (val == 0) ? 1 : val;
+    REG_WRITE(period_buffer, reg_value);
+}
+
+// 更新占空比寄存器
+void PWM_GTIM::update_duty() {
+    auto val = (uint32_t)(duty_ns / 10);
+    uint32_t reg_value = (val == 0) ? 1 : val;
+    REG_WRITE(duty_cycle_buffer, reg_value);
+}
+
 

@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include "register.h"
+#include <config.h>
 
 #define PWM_BASE_ADDR      0x1611B000
 #define PWM_OFFSET         0x10
@@ -17,13 +18,6 @@
 #define CTRL_EN     (1 << 0)
 #define CTRL_OE     (1 << 3)
 #define CTRL_INVERT (1 << 9)
-
-
-
-enum Polarity {
-    POLARITY_NORMAL,
-    POLARITY_INVERTED
-};
 
 class PWM {
 public:

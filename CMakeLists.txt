@@ -42,7 +42,6 @@ file(GLOB CODE_FILES "${CMAKE_SOURCE_DIR}/code/*.cpp")
 
 # 合并源文件
 set(SOURCES ${SRC_FILES} ${CODE_FILES}
-        inc/main.h
 )
 
 # 创建可执行文件

@@ -7,6 +7,7 @@ cv::Mat frame;
 uint8_t image[120][160];
 const char* i2c_dev = "/dev/i2c-0";
 int fd = open(i2c_dev, O_RDWR);
+
 void* realtime_task(void* arg) {
     // 设置实时线程优先级
     auto vofa = VOFA("192.168.5.47", 1349);
@@ -49,7 +50,6 @@ void* realtime_task(void* arg) {
             read(timer_fd, &expirations, sizeof(expirations));
 
             cap >> frame;
-
 
             end = std::chrono::steady_clock::now();
             std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
@@ -158,6 +158,15 @@ int main()
     pwm3.set_frequency(4000);
     pwm3.set_duty(8000);
     pwm3.enable();
+
+    PWM_GTIM gtim1(88, 0b11, 2, 1000, 5000);
+    gtim1.set_frequency(50000);
+    gtim1.set_duty(5000);
+    gtim1.enable();
+
+    PWM_GTIM gtim2(89, 0b11, 3, 1000, 5000);
+    gtim2.set_duty(2000);
+    gtim2.enable();
 
     // 创建posix线程
     pthread_t rt_thread;
