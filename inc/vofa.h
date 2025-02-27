@@ -49,28 +49,68 @@ enum class VOFAImgFormat {
     Format_SVG,
 };
 
+class Transport {
+public:
+    virtual ~Transport() = default;
+    virtual bool t_send(const void* data, size_t length) = 0;
+    virtual bool t_send(const std::vector<unsigned char>& data) = 0;
+};
+
+class UDPTransport : public Transport {
+public:
+    UDPTransport(const char* ip, int port);
+    ~UDPTransport() override;
+
+    bool t_send(const void* data, size_t length) override;
+    bool t_send(const std::vector<unsigned char>& data) override;
+
+private:
+    int sockfd = -1;
+    struct sockaddr_in server_addr{};
+};
+
+class TCPTransport : public Transport {
+public:
+    TCPTransport(const char* bind_ip, int port);
+    ~TCPTransport() override;
+
+    bool t_send(const void* data, size_t length) override;
+    bool t_send(const std::vector<unsigned char>& data) override;
+
+private:
+    void accept_loop();
+    bool send_all(int sockfd, const void* data, size_t length);
+
+    bool running_{true};
+    std::thread accept_thread_;
+
+    int listen_sockfd_ = -1;
+    int client_sockfd_ = -1;
+    std::mutex sock_mutex_;
+
+    struct sockaddr_in server_addr_{};
+};
+
 class VOFA {
 public:
-    VOFA(const char *vofa_ip, int vofa_port);
-    ~VOFA();
-    void imwrite(const cv::Mat &frame);
-    void imwrite(const std::vector<uchar> &jpg);
+    // 通过传输层构造
+    explicit VOFA(std::unique_ptr<Transport> transport);
+
     void printf(const char* format, ...);
+    void imwrite(const std::vector<uchar>& jpg);
+    void imwrite(const cv::Mat& frame);
+
+    // 操作符重载保持原有设计
     VOFA& operator<<(const cv::Mat& frame);
-    VOFA& operator<<(const std::vector<uchar> &jpg);
+    VOFA& operator<<(const std::vector<uchar>& jpg);
     VOFA& operator<<(const std::string& str);
 
 private:
-    std::mutex client_mutex;
-    void accept_loop();
-    static ssize_t sendAll(int sockfd, const void* buffer, size_t length);
-    int sockfd;
-    struct sockaddr_in server_addr = {};
-    std::string vofa_ip;
-    bool running;
-    int client_sockfd;
-    std::thread accept_thread;
+    std::unique_ptr<Transport> transport_;
 
+    void send_image_header(unsigned int img_size,
+                          int width, int height,
+                          int format);
 };
 
 
