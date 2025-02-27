@@ -10,7 +10,8 @@ int fd = open(i2c_dev, O_RDWR);
 
 void* realtime_task(void* arg) {
     // 设置实时线程优先级
-    auto vofa = VOFA("0.0.0.0", 1349);
+    auto transport = std::make_unique<TCPTransport>("0.0.0.0", 1349);
+    auto vofa = VOFA(std::move(transport));
     struct sched_param param = {.sched_priority = 99};
     pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
 
@@ -77,8 +78,9 @@ void* realtime_task(void* arg) {
 // 非实时任务线程函数
 void *non_realtime_task(void *arg) {
 //    cv::VideoWriter http;
-//    http.open("httpjpg", 7766);
-    auto vofa = VOFA("0.0.0.0", 1347);
+    //    http.open("httpjpg", 7766);
+    auto transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
+    auto vofa = VOFA(std::move(transport));
     cv::VideoWriter http;
     http.open("httpjpg",7766);
     auto atag = mytag("tag36h11", 0.5, 0, 1, false, false);

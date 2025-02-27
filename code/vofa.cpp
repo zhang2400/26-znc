@@ -8,134 +8,177 @@
 #include <thread>
 #include <mutex>
 
-VOFA::VOFA(const char *vofa_ip, int vofa_port) : running(true), client_sockfd(-1) {
-    // 创建TCP socket
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+UDPTransport::UDPTransport(const char* ip, int port) {
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
+        std::cerr << "Socket creation failed: " << strerror(errno) << std::endl;
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, ip, &server_addr.sin_addr) <= 0) {
+        close(sockfd);
+        sockfd = -1;
+        std::cerr << "Invalid address: " << strerror(errno) << std::endl;
+    }
+}
+
+UDPTransport::~UDPTransport() {
+    if (sockfd != -1) close(sockfd);
+}
+
+bool UDPTransport::t_send(const void* data, size_t length) {
+    ssize_t sent = sendto(sockfd, data, length, 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    return sent == static_cast<ssize_t>(length);
+}
+
+bool UDPTransport::t_send(const std::vector<unsigned char>& data) {
+    return t_send(data.data(), data.size());
+}
+
+TCPTransport::TCPTransport(const char* bind_ip, int port) {
+    // 创建TCP socket
+    listen_sockfd_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_sockfd_ < 0) {
         std::cerr << "Socket creation failed: " << strerror(errno) << std::endl;
         return;
     }
 
     // 设置SO_REUSEADDR
     int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(listen_sockfd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     // 配置服务器地址
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(vofa_port);
-    if (inet_pton(AF_INET, vofa_ip, &server_addr.sin_addr) <= 0) {
+    server_addr_.sin_family = AF_INET;
+    server_addr_.sin_port = htons(port);
+    if (inet_pton(AF_INET, bind_ip, &server_addr_.sin_addr) <= 0) {
         std::cerr << "Invalid address: " << strerror(errno) << std::endl;
-        close(sockfd);
+        close(listen_sockfd_);
         return;
     }
 
     // 绑定
-    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+    if (bind(listen_sockfd_, (struct sockaddr*)&server_addr_, sizeof(server_addr_)) < 0) {
         std::cerr << "Bind failed: " << strerror(errno) << std::endl;
-        close(sockfd);
+        close(listen_sockfd_);
         return;
     }
 
     // 监听
-    if (listen(sockfd, 5) < 0) {
+    if (listen(listen_sockfd_, 5) < 0) {
         std::cerr << "Listen failed: " << strerror(errno) << std::endl;
-        close(sockfd);
+        close(listen_sockfd_);
         return;
     }
 
     // 启动接受线程
-    accept_thread = std::thread(&VOFA::accept_loop, this);
+    accept_thread_ = std::thread(&TCPTransport::accept_loop, this);
 }
 
-VOFA::~VOFA() {
-    running = false;
-    // 关闭监听socket使accept线程退出
-    close(sockfd);
-    if (accept_thread.joinable()) {
-        accept_thread.join();
+TCPTransport::~TCPTransport() {
+    running_ = false;
+
+    // 关闭监听socket使接受线程退出
+    close(listen_sockfd_);
+
+    if (accept_thread_.joinable()) {
+        accept_thread_.join();
     }
+
     // 关闭客户端socket
-    std::lock_guard<std::mutex> lock(client_mutex);
-    if (client_sockfd != -1) {
-        close(client_sockfd);
+    std::lock_guard<std::mutex> lock(sock_mutex_);
+    if (client_sockfd_ != -1) {
+        close(client_sockfd_);
     }
 }
 
-void VOFA::accept_loop() {
-    while (running) {
+void TCPTransport::accept_loop() {
+    while (running_) {
         struct sockaddr_in client_addr{};
         socklen_t client_len = sizeof(client_addr);
-        int new_client = accept(sockfd, (struct sockaddr*)&client_addr, &client_len);
-        if (new_client < 0) {
-            if (running) {
-                std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+
+        int new_sock = accept(listen_sockfd_, (struct sockaddr*)&client_addr, &client_len);
+        if (new_sock < 0) {
+            if (running_) {
+                std::cerr << "Accept error: " << strerror(errno) << std::endl;
             }
             continue;
         }
 
-        std::lock_guard<std::mutex> lock(client_mutex);
+        std::lock_guard<std::mutex> lock(sock_mutex_);
         // 关闭旧连接
-        if (client_sockfd != -1) {
-            close(client_sockfd);
+        if (client_sockfd_ != -1) {
+            close(client_sockfd_);
         }
-        client_sockfd = new_client;
+        client_sockfd_ = new_sock;
 
-        // 设置TCP_NODELAY避免缓冲延迟
+        // 设置TCP_NODELAY
         int flag = 1;
-        setsockopt(client_sockfd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+        setsockopt(client_sockfd_, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+
+        std::cout << "New client connected: " << inet_ntoa(client_addr.sin_addr) << std::endl;
     }
 }
 
-void VOFA::printf(const char *format, ...) {
+bool TCPTransport::t_send(const void* data, size_t length) {
+    std::lock_guard<std::mutex> lock(sock_mutex_);
+
+    if (client_sockfd_ == -1) {
+        return false; // 无客户端连接
+    }
+
+    return send_all(client_sockfd_, data, length);
+}
+
+bool TCPTransport::t_send(const std::vector<unsigned char>& data) {
+    return t_send(data.data(), data.size());
+}
+
+bool TCPTransport::send_all(int sockfd, const void* data, size_t length) {
+    const char* buffer = static_cast<const char*>(data);
+    size_t total_sent = 0;
+
+    while (total_sent < length) {
+        ssize_t sent = send(sockfd, buffer + total_sent, length - total_sent, MSG_NOSIGNAL); // 防止SIGPIPE
+
+        if (sent < 0) {
+            if (errno == EPIPE) { // 连接断开
+                std::cerr << "Connection broken, resetting client" << std::endl;
+                close(sockfd);
+                client_sockfd_ = -1;
+            }
+            return false;
+        }
+
+        total_sent += sent;
+    }
+
+    return true;
+}
+
+VOFA::VOFA(std::unique_ptr<Transport> transport)
+    : transport_(std::move(transport)) {}
+
+void VOFA::printf(const char* format, ...) {
     char buffer[256];
     va_list args;
     va_start(args, format);
     vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
-
-    std::lock_guard<std::mutex> lock(client_mutex);
-    if (client_sockfd < 0) {
-        return; // 无连接
-    }
-
-    size_t len = strlen(buffer);
-    ssize_t sent = send(client_sockfd, buffer, len, MSG_NOSIGNAL);
-    if (sent < 0) {
-        std::cerr << "Send failed: " << strerror(errno) << std::endl;
-        close(client_sockfd);
-        client_sockfd = -1;
-    } else if (sent != len) {
-        std::cerr << "Partial data sent: " << sent << "/" << len << std::endl;
-    }
+    transport_->t_send(buffer, strlen(buffer));
 }
 
-// imwrite和其他函数需类似修改，用send替换sendto，并处理部分发送
-void VOFA::imwrite(const std::vector<uchar> &jpg) {
-    std::lock_guard<std::mutex> lock(client_mutex);
-    if (client_sockfd < 0) return;
+void VOFA::send_image_header(unsigned int img_size, int width, int height, int format) {
+    char header[128];
+    snprintf(header, sizeof(header),
+            "\nimage:0,%u,%d,%d,%d\n",
+            img_size, width, height, format);
+    transport_->t_send(header, strlen(header));
+}
 
-    char image_header[128];
-    unsigned int img_size = jpg.size();
-    int img_id = 0;
-    snprintf(image_header, sizeof(image_header),
-             "\nimage:%d,%u,%d,%d,%d\n",
-             img_id, img_size, -1, -1, static_cast<int>(VOFAImgFormat::Format_JPG));
-    
-    // 发送header
-    size_t header_len = strlen(image_header);
-    ssize_t sent = sendAll(client_sockfd, image_header, header_len);
-    if (sent < 0) {
-        close(client_sockfd);
-        client_sockfd = -1;
-        return;
-    }
-
-    // 发送数据
-    sent = sendAll(client_sockfd, jpg.data(), img_size);
-    if (sent < 0) {
-        close(client_sockfd);
-        client_sockfd = -1;
-    }
+void VOFA::imwrite(const std::vector<uchar>& jpg) {
+    send_image_header(jpg.size(), -1, -1, static_cast<int>(VOFAImgFormat::Format_JPG));
+    transport_->t_send(jpg);
 }
 
 void VOFA::imwrite(const cv::Mat &frame) {
@@ -154,45 +197,21 @@ void VOFA::imwrite(const cv::Mat &frame) {
             std::cerr << "Unsupported image format" << std::endl;
         return;
     }
-    char image_header[128];
-    unsigned int img_size = frame.total() * frame.elemSize(); // 计算字节数
-    int img_id = 0;
-    int img_width = frame.cols;
-    int img_height = frame.rows;
-    snprintf(image_header, sizeof(image_header),
-             "\nimage:%d,%u,%d,%d,%d\n",
-             img_id, img_size, img_width, img_height, img_format);
-
-    // 发送header
-    size_t header_len = strlen(image_header);
-    ssize_t sent = sendAll(client_sockfd, image_header, header_len);
-    if (sent < 0) {
-        close(client_sockfd);
-        client_sockfd = -1;
-        return;
-    }
-
-    // 发送数据
-    sent = sendAll(client_sockfd, frame.data, img_size);
-    if (sent < 0) {
-        close(client_sockfd);
-        client_sockfd = -1;
-    }
-
+    send_image_header(frame.total() * frame.elemSize(), frame.cols, frame.rows, img_format);
+    transport_->t_send(frame.data, frame.total() * frame.elemSize());
 }
 
-// 辅助函数确保发送完整数据
-ssize_t VOFA::sendAll(int sockfd, const void* buffer, size_t length) {
-    size_t sent_total = 0;
-    const char* ptr = static_cast<const char*>(buffer);
-    while (sent_total < length) {
-        ssize_t sent = send(sockfd, ptr + sent_total, length - sent_total, MSG_NOSIGNAL);
-        if (sent < 0) {
-            return -1; // 错误
-        }
-        sent_total += sent;
-    }
-    return (ssize_t)sent_total;
+VOFA &VOFA::operator<<(const cv::Mat &frame) {
+    imwrite(frame);
+    return *this;
 }
 
-// 其他成员函数类似修改，使用sendAll发送数据
+VOFA &VOFA::operator<<(const std::vector<uchar> &jpg) {
+    imwrite(jpg);
+    return *this;
+}
+
+VOFA &VOFA::operator<<(const std::string &str) {
+    transport_->t_send(str.c_str(), str.size());
+    return *this;
+}
