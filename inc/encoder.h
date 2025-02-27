@@ -20,7 +20,7 @@
 #include "GPIO.h"
 #include "register.h"
 
-#define ENCODER_PPR 1024 // 编码器线数
+#define ENCODER_PPR 512 // 编码器线数
 
 #define PWM_BASE_ADDR 0x1611B000
 #define PWM_OFFSET 0x10

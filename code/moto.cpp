@@ -4,7 +4,7 @@
 
 #include "moto.h"
 
-Moto::Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio)
+Moto::Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio, bool inverse)
     : motor(pwmNum), direction(dirgpio), encoder(encoderNum, encgpio), speed(0)
 {
     motor.set_frequency(15000);
@@ -42,5 +42,5 @@ void Moto::set_speed(int duty)
 
 void Moto::update_speed()
 {
-    speed = encoder.pulse_counter_update();
+    speed = (inverse) ? encoder.pulse_counter_update() : -encoder.pulse_counter_update();
 }

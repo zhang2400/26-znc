@@ -1,5 +1,7 @@
 #include "main.h"
 
+#include <moto.h>
+
 volatile sig_atomic_t g_signal_received = 0;
 const int timer_period = 10;  // 定时器周期(ms)
 std::atomic<bool> running{true};      // 控制线程运行标志
@@ -11,6 +13,8 @@ int fd = open(i2c_dev, O_RDWR);
 void* realtime_task(void* arg) {
 
     BEEP beep(61);
+    Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, true);
+    Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, false);
 
     // 设置实时线程优先级
     auto transport = std::make_unique<TCPTransport>("0.0.0.0", 1349);
@@ -66,10 +70,15 @@ void* realtime_task(void* arg) {
             }
             memcpy(image, frame.data, 120 * 160);
             uint8_t pixel_value = image[60][80];
-            vofa.printf("aaa:%d\n",pixel_value);
+            vofa.printf("L:%d,%d\n",Moto_L.speed, Moto_R.speed);
 
-            icm20602_read_all(fd, &icm20602, 0.01);
-            printf("AngleX: %f, AngleY: %f, AngleZ: %f\n", icm20602.KalmanAngleX, icm20602.KalmanAngleY, icm20602.AngleZ);
+            Moto_L.update_speed();
+            Moto_R.update_speed();
+
+            Moto_L.set_speed(2500);
+            Moto_R.set_speed(3000);
+            // icm20602_read_all(fd, &icm20602, 0.01);
+            // printf("AngleX: %f, AngleY: %f, AngleZ: %f\n", icm20602.KalmanAngleX, icm20602.KalmanAngleY, icm20602.AngleZ);
         }
     }
 

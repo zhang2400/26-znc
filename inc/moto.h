@@ -12,12 +12,13 @@
 
 class Moto {
 public:
-    Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio);
+    Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio, bool inverse);
     ~Moto();
     void set_speed(int duty);
     void update_speed();
     int speed;
 private:
+    bool inverse;
     PWM motor;
     GPIO direction;
     ENCODER encoder;
