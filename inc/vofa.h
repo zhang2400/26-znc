@@ -5,6 +5,7 @@
 #ifndef CV_VOFA_H
 #define CV_VOFA_H
 
+#include <thread>
 #include <opencv2/opencv.hpp>
 #include <netinet/in.h>
 
@@ -60,9 +61,15 @@ public:
     VOFA& operator<<(const std::string& str);
 
 private:
+    std::mutex client_mutex;
+    void accept_loop();
+    static ssize_t sendAll(int sockfd, const void* buffer, size_t length);
     int sockfd;
     struct sockaddr_in server_addr = {};
     std::string vofa_ip;
+    bool running;
+    int client_sockfd;
+    std::thread accept_thread;
 
 };
 
