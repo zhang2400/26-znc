@@ -1,32 +1,41 @@
 #include "main.h"
-
+// 电机相关变量
 PID_Incremental left_wheel_speed_pid;
 PID_Incremental right_wheel_speed_pid;
 
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float32 left_speed_setpoint = 100;
-float32 right_speed_setpoint = 100;
+float32 left_speed_setpoint = 60;
+float32 right_speed_setpoint = 60;
 
+// 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
+
+// 实时线程相关变量
 const int timer_period = 10;  // 定时器周期(ms)
 std::atomic<bool> running{true};      // 控制线程运行标志
+
+// 图像处理相关变量
 cv::Mat frame;
 uint8_t image[120][160];
 const char* i2c_dev = "/dev/i2c-0";
 int fd = open(i2c_dev, O_RDWR);
 
+// 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
 auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 void* realtime_task(void* arg) {
-
-    BEEP beep(61);
+    BEEP beep(GPIO61);
     Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
     Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, true);
+
+    Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
+
+    icm20602_init(fd);
 
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
@@ -93,6 +102,7 @@ void* realtime_task(void* arg) {
 
             Moto_L.set_speed((int)left_wheel_pidout);
             Moto_R.set_speed((int)right_wheel_pidout);
+
             // icm20602_read_all(fd, &icm20602, 0.01);
             // printf("AngleX: %f, AngleY: %f, AngleZ: %f\n", icm20602.KalmanAngleX, icm20602.KalmanAngleY, icm20602.AngleZ);
         }
@@ -115,8 +125,6 @@ void *non_realtime_task(void *arg) {
     cv::Mat gray;
     double distance;
     std::vector<uchar> jpg;
-
-    icm20602_init(fd);
 
     while (running) {
             frame.copyTo(my_frame);

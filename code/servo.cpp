@@ -5,7 +5,7 @@
 #include "servo.h"
 
 Servo::Servo(int pwm_channel, uint32_t freq_hz, float min_angle, float max_angle, float mid_angle)
-    : PWM(pwm_channel),
+    : PWM_GTIM(pwm_channel, 0b11, 2, freq_hz, SERVO_MOTOR_DUTY(mid_angle)),
       min_angle_(min_angle),
       max_angle_(max_angle),
       mid_angle_(mid_angle)

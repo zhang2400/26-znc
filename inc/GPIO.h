@@ -21,6 +21,22 @@
 #include <sstream>
 #include <cstring>
 
+enum GPIO_pin {
+    GPIO40 = 40,
+    GPIO41 = 41,
+    GPIO43 = 43,
+    GPIO50 = 50,
+    GPIO51 = 51,
+    GPIO60 = 60,
+    GPIO61 = 61,
+    GPIO62 = 62,
+    GPIO63 = 63,
+    GPIO72 = 72,
+    GPIO73 = 73,
+    GPIO74 = 74,
+    GPIO75 = 75,
+};
+
 class GPIO
 {
 public:

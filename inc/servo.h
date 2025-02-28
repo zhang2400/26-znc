@@ -5,9 +5,10 @@
 #ifndef SERVO_H
 #define SERVO_H
 #include "pwm.h"
+#include "pwm_gtim.h"
 #include "config.h"
 
-class Servo : public PWM {
+class Servo : public PWM_GTIM {
 public:
     // 构造函数：指定PWM通道、频率、角度范围
     explicit Servo(

@@ -4,7 +4,7 @@
  * @LastEditors: ilikara 3435193369@qq.com
  * @LastEditTime: 2024-12-01 13:23:26
  * @FilePath: /ls2k0300_peripheral_library/lib/pwm_gtim.h
- * @Description: åŸºäºLS2K0300 GTIMERçš„PWMæ§åˆ¶å™¨ç±»ï¼Œå¯ä½¿ç”¨å¤ç”¨ä¸ºTIM2_CHxçš„å¼•è„š
+ * @Description: »ùÓÚLS2K0300 GTIMERµÄPWM¿ØÖÆÆ÷Àà£¬¿ÉÊ¹ÓÃ¸´ÓÃÎªTIM2_CHxµÄÒı½Å
  *
  * Copyright (c) 2024 by ilikara 3435193369@qq.com, All Rights Reserved.
  */
@@ -56,8 +56,8 @@ public:
     void disable(void);
 
 
-    void set_frequency(uint32_t freq_hz);           // è®¾ç½®é¢‘ç‡ï¼ˆHzï¼‰
-    void set_duty(uint32_t duty);      // è®¾ç½®å ç©ºæ¯”ï¼ˆ0~PWM_DUTY_MAXï¼‰
+    void set_frequency(uint32_t freq_hz);           // ÉèÖÃÆµÂÊ£¨Hz£©
+    void set_duty(uint32_t duty);      // ÉèÖÃÕ¼¿Õ±È£¨0~PWM_DUTY_MAX£©
 
     void update_period();
     void update_duty();
@@ -66,8 +66,8 @@ public:
     uint32_t period_10ns, duty_cycle_10ns;
 
 private:
-    float period_ns;        // å½“å‰å‘¨æœŸï¼ˆnsï¼‰
-    float duty_ns;          // å½“å‰å ç©ºæ¯”ï¼ˆnsï¼‰
+    float period_ns;        // µ±Ç°ÖÜÆÚ£¨ns£©
+    float duty_ns;          // µ±Ç°Õ¼¿Õ±È£¨ns£©
     uint32_t chNum;
     void *ccmr_buffer[2];
     void *ccer_buffer;
