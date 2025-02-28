@@ -1,28 +1,42 @@
+/*
+ * @Author: ilikara 3435193369@qq.com
+ * @Date: 2024-11-30 08:07:26
+ * @LastEditors: Ilikara 3435193369@qq.com
+ * @LastEditTime: 2025-02-14 09:54:33
+ * @FilePath: /ls2k0300_peripheral_library/src/pwm_gtim.cpp
+ * @Description: »ùÓÚLS2K0300 GTIMERµÄPWM¿ØÖÆÆ÷Àà£¬¿ÉÊ¹ÓÃ¸´ÓÃÎªTIM2_CHxµÄÒı½Å
+ *
+ * Copyright (c) 2024 by ilikara 3435193369@qq.com
+ *
+ * This program is free software: you can redistribute it and/or modifym
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 #include "pwm_gtim.h"
 
-PWM_GTIM::PWM_GTIM(int gpio, int mux, int chNum_, float frequency, int duty_value)
-    : chNum(chNum_ - 1)  // chNum ä» 1 å¼€å§‹ï¼Œéœ€è¦å‡ 1
+PWM_GTIM::PWM_GTIM(int gpio, int mux, int chNum_, int frequency, int duty)
+    : period(frequency), duty(duty), chNum(chNum_ - 1)
 {
-    if (chNum < 0 || chNum > 3) {
-        return;
+    { // ÅäÖÃ¹¦ÄÜ¸´ÓÃ
+        void *gpio_mux_buffer = map_register(GPIO_MUX_BASE_ADDR + (gpio / 16) * 0x04, PAGE_SIZE);
+        REG_WRITE(gpio_mux_buffer, (REG_READ(gpio_mux_buffer) & ~(0b11 << (gpio % 16 * 2))) | (mux << (gpio % 16 * 2)));
     }
 
-    // è®¡ç®—å‘¨æœŸï¼ˆ10 çº³ç§’å•ä½ï¼‰
-    period_10ns = (unsigned int)(1e8 / frequency);
-
-    // è®¡ç®—å ç©ºæ¯”ï¼ˆ0ï½10000 å¯¹åº” 0%ï½100%ï¼‰
-    duty_cycle_10ns = duty_value;
-
-    // é…ç½® GPIO å¤ç”¨åŠŸèƒ½
-    void *gpio_mux_buffer = map_register(GPIO_MUX_BASE_ADDR + (gpio / 16) * 0x04, PAGE_SIZE);
-    unsigned int old_mux = REG_READ(gpio_mux_buffer);
-    REG_WRITE(gpio_mux_buffer, (old_mux & ~(0b11 << (gpio % 16 * 2))) | (mux << (gpio % 16 * 2)));
-    unsigned int new_mux = REG_READ(gpio_mux_buffer);
-
-    // åˆå§‹åŒ– GTIM å¯„å­˜å™¨
+    // ³õÊ¼»¯ËùÓĞ¼Ä´æÆ÷
     REG_WRITE(map_register(GTIM_BASE_ADDR + GTIM_EGR_OFFSET, PAGE_SIZE), 0x01);
 
-    // ç»‘å®šå¯„å­˜å™¨
+    // Æô¶¯¼ÆÊıÆ÷
+    REG_WRITE(map_register(GTIM_BASE_ADDR + GTIM_CR1_OFFSET, PAGE_SIZE), 0x01);
+
     period_buffer = map_register(GTIM_BASE_ADDR + GTIM_ARR_OFFSET, PAGE_SIZE);
     duty_cycle_buffer = map_register(GTIM_BASE_ADDR + GTIM_CCR1_OFFSET + chNum * 0x04, PAGE_SIZE);
     ccmr_buffer[0] = map_register(GTIM_BASE_ADDR + GTIM_CCMR1_OFFSET, PAGE_SIZE);
@@ -30,25 +44,22 @@ PWM_GTIM::PWM_GTIM(int gpio, int mux, int chNum_, float frequency, int duty_valu
     ccer_buffer = map_register(GTIM_BASE_ADDR + GTIM_CCER_OFFSET, PAGE_SIZE);
     cnt_buffer = map_register(GTIM_BASE_ADDR + GTIM_CNT_OFFSET, PAGE_SIZE);
 
-    // é…ç½® PWM æ¨¡å¼ï¼ˆç¡®ä¿ CHx å¤„äº PWM1 æ¨¡å¼ï¼‰h
-    unsigned int ccmr_val = REG_READ(ccmr_buffer[chNum / 2]);
-    ccmr_val &= ~(0x7 << (chNum % 2 * 8 + 4));  // æ¸…é™¤
-    ccmr_val |= (0x6 << (chNum % 2 * 8 + 4));   // è®¾ç½® PWM1 æ¨¡å¼
-    REG_WRITE(ccmr_buffer[chNum / 2], ccmr_val);
+    // Çå³ıchNumµÄPWMÄ£Ê½
+    REG_WRITE(ccmr_buffer[chNum / 2], REG_READ(ccmr_buffer[chNum / 2]) & ~(0x7 << (chNum % 2 * 8 + 4)));
+    // ÅäÖÃchNumµÄPWMÄ£Ê½ 0x6ÎªÄ£Ê½1 0x7ÎªÄ£Ê½2
+    REG_WRITE(ccmr_buffer[chNum / 2], REG_READ(ccmr_buffer[chNum / 2]) | (0x7 << (chNum % 2 * 8 + 4)));
 
-    // è®¾ç½®è¾“å‡ºææ€§ï¼ˆé»˜è®¤ä¸åç›¸ï¼‰
-    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) & ~(0x1 << (chNum * 4 + 1)));
+    // Çå³ıchNumµÄÊä³ö¼«ĞÔ
+    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) & ~(0x1 << (chNum * 4 + 1))); // 1Îª·´Ïà
+    // ÅäÖÃchNumµÄÊä³ö¼«ĞÔ
+    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) | (0x1 << (chNum * 4 + 1))); // 1Îª·´Ïà
 
-    // è®¾ç½®å‘¨æœŸå’Œå ç©ºæ¯”
-    REG_WRITE(period_buffer, period_10ns);
-    unsigned int duty_ns = (unsigned int)(((uint64_t)period_10ns * duty_value) / 10000);
-    REG_WRITE(duty_cycle_buffer, duty_ns);
-
-    // å¤ä½è®¡æ•°å™¨
+    // REG_WRITE(period_buffer, period);
+    set_frequency(period);
+    // REG_WRITE(duty_cycle_buffer, duty);
+    set_duty(duty);
     REG_WRITE(cnt_buffer, 0);
-
-    printf("[PWM INIT] GPIO %d (CH%d): Freq=%.2f Hz, ARR=%u, CCR=%u (%u%%)\n",
-           gpio, chNum + 1, frequency, period_10ns, duty_ns, (duty_value * 100) / 10000);
+    printf("Registers mapped successfully\n");
 }
 
 PWM_GTIM::~PWM_GTIM(void)
@@ -63,50 +74,59 @@ PWM_GTIM::~PWM_GTIM(void)
 
 void PWM_GTIM::enable(void)
 {
-    // å…ˆå…³é—­ CH2/CH3ï¼Œç¡®ä¿çŠ¶æ€å¹²å‡€
-    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) & ~(0x1 << (chNum * 4)));
-
-    // ä½¿èƒ½ PWM é€šé“
-    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) | (0x1 << (chNum * 4)));
-
-    // ç«‹å³æ›´æ–° ARR å’Œ CCRï¼Œç¡®ä¿ PWM æ­£ç¡®è¿è¡Œ
-    REG_WRITE(map_register(GTIM_BASE_ADDR + GTIM_EGR_OFFSET, PAGE_SIZE), 0x01);
-
-    printf("[PWM ENABLE] CH%d Enabled, CCER: 0x%x\n", chNum + 1, REG_READ(ccer_buffer));
+    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) | (0x1 << (chNum * 4 + 0)));
 }
-
 
 void PWM_GTIM::disable(void)
 {
-    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) & ~(0x1 << (chNum * 4)));
+    REG_WRITE(ccer_buffer, REG_READ(ccer_buffer) & ~(0x1 << (chNum * 4 + 0)));
 }
 
-// è®¾ç½®é¢‘ç‡ï¼ˆå•ä½ï¼šHzï¼‰
+// ÉèÖÃÖÜÆÚ£¨ÒÔ10ÄÉÃëÎªµ¥Î»£©
+void PWM_GTIM::setPeriod(unsigned int period_10ns_)
+{
+    period = period_10ns_;
+    REG_WRITE(period_buffer, period);
+
+    REG_WRITE(cnt_buffer, 0);
+}
+
+// ÉèÖÃµÍµçÆ½Ê±¼ä£¨ÒÔ10ÄÉÃëÎªµ¥Î»£©
+void PWM_GTIM::setDutyCycle(unsigned int duty_cycle_10ns_)
+{
+    duty = duty_cycle_10ns_;
+    REG_WRITE(duty_cycle_buffer, duty);
+
+    REG_WRITE(cnt_buffer, 0);
+}
+
+// ÉèÖÃÆµÂÊ£¨µ¥Î»£ºHz£©
 void PWM_GTIM::set_frequency(uint32_t freq_hz) {
     if (freq_hz == 0) return;
-    period_ns = (float)1'000'000'000 / (float)freq_hz; // è½¬æ¢ä¸ºns
+    period_ns = (float)1'000'000'000 / (float)freq_hz; // ×ª»»Îªns
+    printf("ns:%f\n", period_ns);
     update_period();
 }
 
-// è®¾ç½®å ç©ºæ¯”ï¼ˆ0~PWM_DUTY_MAXï¼‰
+// ÉèÖÃÕ¼¿Õ±È£¨0~PWM_DUTY_MAX£©
 void PWM_GTIM::set_duty(uint32_t duty) {
     if (duty > PWM_DUTY_MAX) duty = PWM_DUTY_MAX;
     duty_ns = period_ns / PWM_DUTY_MAX * (float)duty;
     update_duty();
 }
 
-// æ›´æ–°å‘¨æœŸå¯„å­˜å™¨
+// ¸üĞÂÖÜÆÚ¼Ä´æÆ÷
 void PWM_GTIM::update_period() {
     auto val = (uint32_t)(period_ns / 10);
     uint32_t reg_value = (val == 0) ? 1 : val;
     REG_WRITE(period_buffer, reg_value);
+    REG_WRITE(cnt_buffer, 0);
 }
 
-// æ›´æ–°å ç©ºæ¯”å¯„å­˜å™¨
+// ¸üĞÂÕ¼¿Õ±È¼Ä´æÆ÷
 void PWM_GTIM::update_duty() {
     auto val = (uint32_t)(duty_ns / 10);
     uint32_t reg_value = (val == 0) ? 1 : val;
     REG_WRITE(duty_cycle_buffer, reg_value);
+    REG_WRITE(cnt_buffer, 0);
 }
-
-
