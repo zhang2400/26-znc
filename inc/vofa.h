@@ -96,9 +96,10 @@ public:
     // 通过传输层构造
     explicit VOFA(std::unique_ptr<Transport> transport);
 
-    void printf(const char* format, ...);
     void imwrite(const std::vector<uchar>& jpg);
     void imwrite(const cv::Mat& frame);
+    void imwrite(const uint8_t *data, int width, int height);
+    void printf(const char* format, ...);
 
     // 操作符重载保持原有设计
     VOFA& operator<<(const cv::Mat& frame);

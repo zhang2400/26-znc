@@ -201,6 +201,11 @@ void VOFA::imwrite(const cv::Mat &frame) {
     transport_->t_send(frame.data, frame.total() * frame.elemSize());
 }
 
+void VOFA::imwrite(const uint8_t *image, int width, int height) {
+    send_image_header(width * height, width, height, static_cast<int>(VOFAImgFormat::Format_Grayscale8));
+    transport_->t_send(image, width * height);
+}
+
 VOFA &VOFA::operator<<(const cv::Mat &frame) {
     imwrite(frame);
     return *this;
@@ -210,6 +215,7 @@ VOFA &VOFA::operator<<(const std::vector<uchar> &jpg) {
     imwrite(jpg);
     return *this;
 }
+
 
 VOFA &VOFA::operator<<(const std::string &str) {
     transport_->t_send(str.c_str(), str.size());

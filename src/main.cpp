@@ -1,6 +1,13 @@
 #include "main.h"
 
-#include <moto.h>
+PID_Incremental left_wheel_speed_pid;
+PID_Incremental right_wheel_speed_pid;
+
+float left_wheel_pidout = 0;
+float right_wheel_pidout = 0;
+
+float32 left_speed_setpoint = 100;
+float32 right_speed_setpoint = 100;
 
 volatile sig_atomic_t g_signal_received = 0;
 const int timer_period = 10;  // 定时器周期(ms)
@@ -10,15 +17,21 @@ uint8_t image[120][160];
 const char* i2c_dev = "/dev/i2c-0";
 int fd = open(i2c_dev, O_RDWR);
 
+auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
+auto vofa_tcp = VOFA(std::move(tcp_transport));
+auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
+auto vofa_udp = VOFA(std::move(udp_transport));
+
 void* realtime_task(void* arg) {
 
     BEEP beep(61);
-    Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, true);
-    Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, false);
+    Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
+    Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, true);
+
+    left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
+    right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
 
     // 设置实时线程优先级
-    auto transport = std::make_unique<TCPTransport>("0.0.0.0", 1349);
-    auto vofa = VOFA(std::move(transport));
     struct sched_param param = {.sched_priority = 99};
     pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
 
@@ -69,14 +82,17 @@ void* realtime_task(void* arg) {
                 LOGW("timer_event", "定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
             memcpy(image, frame.data, 120 * 160);
-            uint8_t pixel_value = image[60][80];
-            vofa.printf("L:%d,%d\n",Moto_L.speed, Moto_R.speed);
+            // uint8_t pixel_value = image[60][80];
+            vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
 
             Moto_L.update_speed();
             Moto_R.update_speed();
 
-            Moto_L.set_speed(2500);
-            Moto_R.set_speed(3000);
+            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float) Moto_L.speed, left_speed_setpoint);
+            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float) Moto_R.speed, right_speed_setpoint);
+
+            Moto_L.set_speed((int)left_wheel_pidout);
+            Moto_R.set_speed((int)right_wheel_pidout);
             // icm20602_read_all(fd, &icm20602, 0.01);
             // printf("AngleX: %f, AngleY: %f, AngleZ: %f\n", icm20602.KalmanAngleX, icm20602.KalmanAngleY, icm20602.AngleZ);
         }
@@ -91,8 +107,6 @@ void* realtime_task(void* arg) {
 void *non_realtime_task(void *arg) {
 //    cv::VideoWriter http;
     //    http.open("httpjpg", 7766);
-    auto transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
-    auto vofa = VOFA(std::move(transport));
     cv::VideoWriter http;
     http.open("httpjpg",7766);
     auto atag = mytag("tag36h11", 0.5, 0, 1, false, false);
@@ -126,7 +140,7 @@ void *non_realtime_task(void *arg) {
                 cv::putText(my_frame, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
 //            });
 //            MEASURE_TIME("http write", {
-                vofa.imwrite(my_frame);
+                vofa_tcp.imwrite(my_frame);
                 // http << my_frame;
 //            });
     }
@@ -153,35 +167,6 @@ int main()
         return 1;
     }
     LOGW("MAIN", "Application starting...");
-
-    PWM pwm0(PWM0_GPIO64);
-    pwm0.set_frequency(1000);
-    pwm0.set_duty(4200);
-    pwm0.enable();
-
-    PWM pwm1(1);
-    pwm1.set_frequency(3000);
-    pwm1.set_duty(1500);
-    pwm1.enable();
-
-    PWM pwm2(2);
-    pwm2.set_frequency(30000);
-    pwm2.set_duty(5000);
-    pwm2.enable();
-
-    PWM pwm3(3);
-    pwm3.set_frequency(4000);
-    pwm3.set_duty(8000);
-    pwm3.enable();
-
-    PWM_GTIM gtim1(88, 0b11, 2, 1000, 5000);
-    gtim1.set_frequency(50000);
-    gtim1.set_duty(5000);
-    gtim1.enable();
-
-    PWM_GTIM gtim2(89, 0b11, 3, 1000, 5000);
-    gtim2.set_duty(2000);
-    gtim2.enable();
 
     // 创建posix线程
     pthread_t rt_thread;

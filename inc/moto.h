@@ -17,6 +17,7 @@ public:
     void set_speed(int duty);
     void update_speed();
     int speed;
+    int last_speed;
 private:
     bool inverse;
     PWM motor;

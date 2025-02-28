@@ -25,6 +25,8 @@
 #include "config.h"
 #include <pwm_gtim.h>
 #include <beep.h>
+#include "PID.h"
+#include <moto.h>
 
 // 图像和传感器数据结构
 struct FrameData {

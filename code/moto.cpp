@@ -12,6 +12,8 @@ Moto::Moto(int pwmNum, int dirgpio, int encoderNum, int encgpio, bool inverse)
     motor.enable();
     direction.setDirection("out");
     direction.setValue(false);
+    this->inverse = inverse;
+    last_speed = 0;
 }
 
 Moto::~Moto()
@@ -42,5 +44,8 @@ void Moto::set_speed(int duty)
 
 void Moto::update_speed()
 {
-    speed = (inverse) ? encoder.pulse_counter_update() : -encoder.pulse_counter_update();
+    const double _speed = (inverse) ? encoder.pulse_counter_update() : -encoder.pulse_counter_update();
+    constexpr double factor = 0.7;
+    speed = static_cast<int>(factor * _speed + (1 - factor) * last_speed);
+    last_speed = speed;
 }
