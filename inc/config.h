@@ -5,6 +5,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "cstring"
+#include "cstdint"
+#include <ctgmath>
+
 enum PWM_Pin {
     PWM0_GPIO64 = 0,
     PWM1_GPIO65 = 1,
@@ -20,6 +24,14 @@ enum Polarity {
     POLARITY_NORMAL,
     POLARITY_INVERTED
 };
+
+// 图像处理
+#define DISTANCE(x1, y1, x2, y2) sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2))
+
+// MATH
+#define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
+#define ABS(x) ((x) > 0 ? (x) : -(x))
+
 
 // 舵机配置
 #define SERVO_MOTOR_DUTY(x)         ((float)PWM_DUTY_MAX/(1000.0/(float)SERVO_MOTOR_FREQ)*(0.5+(float)(x)/90.0))
@@ -37,4 +49,5 @@ enum Polarity {
 #define PWM_DUTY_MAX 10000
 
 #define WHEEL_MAX_DUTY              (4000)  // 电机最大占空比
+
 #endif //CONFIG_H

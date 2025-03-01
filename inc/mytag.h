@@ -45,11 +45,19 @@ public:
     void detect(const cv::Mat& gray);
 
     /**
-     * @brief 在图像上绘制检测到的AprilTag标签，包括ID和边框，最近的标签边框为绿色，其余为红色
+     * @brief 在图像上绘制检测到的AprilTag标签
      *
      * @param frame 输入的图像帧
      */
     void draw(cv::Mat &frame);
+
+    /**
+     * @brief 在图像上绘制检测到的AprilTag标签
+     *
+     * @param frame 输入的图像帧
+     * @param zoom 坐标缩放系数
+     */
+    void draw(cv::Mat &frame, double zoom);
 
     /**
      * @brief 清理检测结果

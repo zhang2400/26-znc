@@ -10,24 +10,28 @@
 #include <chrono>
 #include <vector>
 #include <iostream>
-#include <cstring>
 #include <sys/timerfd.h>
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <pthread.h>
 #include "opencv2/opencv.hpp"
+#include <csignal>
+
 #include "mytag.h"
 #include "log.h"
 #include "vofa.h"
-#include <csignal>
+
+#include "config.h"
 #include "pwm.h"
 #include "icm20602.h"
-#include "config.h"
 #include <beep.h>
 #include "PID.h"
 #include <moto.h>
 #include "servo.h"
 #include "pwm_gtim.h"
+#include <switch.h>
+#include <my_cv2.h>
+#include "image_process.h"
 
 // 图像和传感器数据结构
 struct FrameData {

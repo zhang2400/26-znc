@@ -81,7 +81,7 @@ void mytag::detect(const cv::Mat& gray) {
     // 将OpenCV图像转换为AprilTag所需的格式
     image_u8_t im = {
         .width = gray.cols,
-        .height = gray.rows,
+        .height = gray.rows / 3,
         .stride = gray.cols,
         .buf = gray.data
     };
@@ -107,6 +107,26 @@ void mytag::draw(cv::Mat &frame) {
         line(frame, cv::Point((int)det->p[3][0], (int)det->p[3][1]),
                  cv::Point((int)det->p[0][0], (int)det->p[0][1]), color, 2);
         putText(frame, std::to_string((int)det->id), cv::Point((int)det->c[0], (int)det->c[1]), cv::FONT_HERSHEY_SIMPLEX, 1, color, 2);
+    }
+}
+
+void mytag::draw(cv::Mat &frame, double zoom) {
+    // 绘制检测到的标签
+    for (int i = 0; i < zarray_size(detections); i++) {
+        cv::Scalar color = (i == closestTagIndex) ? cv::Scalar(0, 0xff, 0) : cv::Scalar(0, 0, 0xff);
+        apriltag_detection_t *det;
+        zarray_get(detections, i, &det);
+
+        // 在框架上绘制检测到的标签
+        line(frame,cv::Point((int)(det->p[0][0] * zoom), (int)(det->p[0][1] * zoom)),
+                    cv::Point((int)(det->p[1][0] * zoom), (int)(det->p[1][1] * zoom)), color, 1);
+        line(frame, cv::Point((int)(det->p[1][0] * zoom), (int)(det->p[1][1] * zoom)),
+                    cv::Point((int)(det->p[2][0] * zoom), (int)(det->p[2][1] * zoom)), color, 1);
+        line(frame,cv::Point((int)(det->p[2][0] * zoom), (int)(det->p[2][1] * zoom)),
+                    cv::Point((int)(det->p[3][0] * zoom), (int)(det->p[3][1] * zoom)), color, 1);
+        line(frame, cv::Point((int)(det->p[3][0] * zoom), (int)(det->p[3][1] * zoom)),
+                    cv::Point((int)(det->p[0][0] * zoom), (int)(det->p[0][1] * zoom)), color, 1);
+        putText(frame, std::to_string((int)det->id), cv::Point((int)(det->c[0] * zoom), (int)(det->c[1] * zoom + 30)), cv::FONT_HERSHEY_SIMPLEX, 1, color, 1);
     }
 }
 
