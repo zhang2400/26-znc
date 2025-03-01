@@ -33,6 +33,10 @@ auto vofa_tcp = VOFA(std::move(tcp_transport));
 auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
+int i = SERVO_MOTOR_MID;
+int j = 0;
+int flag = 1;
+
 void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.24, 0, 50000, -50000, false, 0.2f);
 
@@ -112,8 +116,12 @@ void* realtime_task(void* arg) {
             Moto_L.set_speed((int)left_wheel_pidout);
             Moto_R.set_speed((int)right_wheel_pidout);
 
-            printf("%d\n",switch1());
-
+            if (switch1()) {
+                beep.beep_on();
+            }
+            else {
+                beep.beep_off();
+            }
             // icm20602_read_all(fd, &icm20602, 0.01);
             // printf("AngleX: %f, AngleY: %f, AngleZ: %f\n", icm20602.KalmanAngleX, icm20602.KalmanAngleY, icm20602.AngleZ);
         }
