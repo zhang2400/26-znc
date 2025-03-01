@@ -25,6 +25,8 @@ enum GPIO_pin {
     GPIO40 = 40,
     GPIO41 = 41,
     GPIO43 = 43,
+    GPIO44 = 44,
+    GPIO45 = 45,
     GPIO50 = 50,
     GPIO51 = 51,
     GPIO60 = 60,

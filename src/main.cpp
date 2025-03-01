@@ -1,8 +1,13 @@
 #include "main.h"
-// 电机相关变量
+
+#include <switch.h>
+// PID相关变量
 PID_Incremental left_wheel_speed_pid;
 PID_Incremental right_wheel_speed_pid;
 
+PID_Position wheel_turn_pid;
+
+// 电机相关变量
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
@@ -13,7 +18,7 @@ float32 right_speed_setpoint = 60;
 volatile sig_atomic_t g_signal_received = 0;
 
 // 实时线程相关变量
-const int timer_period = 10;  // 定时器周期(ms)
+const int timer_period = 10;            // 定时器周期(ms)
 std::atomic<bool> running{true};      // 控制线程运行标志
 
 // 图像处理相关变量
@@ -29,6 +34,13 @@ auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 void* realtime_task(void* arg) {
+    wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.24, 0, 50000, -50000, false, 0.2f);
+
+    left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
+    right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
+
+    switch_init();
+
     BEEP beep(GPIO61);
     Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
     Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, true);
@@ -36,9 +48,6 @@ void* realtime_task(void* arg) {
     Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 
     icm20602_init(fd);
-
-    left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
-    right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
 
     // 设置实时线程优先级
     struct sched_param param = {.sched_priority = 99};
@@ -102,6 +111,8 @@ void* realtime_task(void* arg) {
 
             Moto_L.set_speed((int)left_wheel_pidout);
             Moto_R.set_speed((int)right_wheel_pidout);
+
+            printf("%d\n",switch1());
 
             // icm20602_read_all(fd, &icm20602, 0.01);
             // printf("AngleX: %f, AngleY: %f, AngleZ: %f\n", icm20602.KalmanAngleX, icm20602.KalmanAngleY, icm20602.AngleZ);
