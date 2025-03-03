@@ -9,9 +9,6 @@ void switch_init()
 {
     switch_1.setDirection("in");
     switch_2.setDirection("in");
-
-    switch_1.setValue(true);
-    switch_2.setValue(true);
 }
 
 bool switch1() {

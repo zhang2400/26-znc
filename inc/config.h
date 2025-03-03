@@ -25,8 +25,12 @@ enum Polarity {
     POLARITY_INVERTED
 };
 
+#define CAR_WHEELBASE_L 0.2
+#define CAR_WHEELBASE_B 0.16
+
 // 图像处理
 #define DISTANCE(x1, y1, x2, y2) sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2))
+#define IMAGE_MIDDLE            42
 
 // MATH
 #define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))

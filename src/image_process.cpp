@@ -815,7 +815,7 @@ int get_border_line(int detect_count_max) {
     right_y = right_border[right_border_index][1];
     left_dir = -1;  // 重置左边界方向
     right_dir = -1;  // 重置右边界方向
-    vofa_udp.printf(":%d,%d,%d,%d,%d,%d\n",left_x,left_y,right_x,right_y,bottom_start_x,bottom_end_x);
+    // vofa_udp.printf(":%d,%d,%d,%d,%d,%d\n",left_x,left_y,right_x,right_y,bottom_start_x,bottom_end_x);
     for(detect_count = 0; detect_count < detect_count_max; detect_count++) {
         // 左边界
         if(detect_count > 15 && sqrt((left_x - left_border[left_border_index-5][0]) * (left_x - left_border[left_border_index-5][0]) + (left_y - left_border[left_border_index-5][1]) * (left_y - left_border[left_border_index-5][1])) < 4){
@@ -894,7 +894,7 @@ int get_border_line(int detect_count_max) {
                   binary_image[right_y - 1][right_x - 1] == border_color){  // 正左黑，方向5，正上白
             right_x = right_x - 1;
             right_dir = 4;
-        } else if(left_dir != 1 && binary_image[right_y - 1][right_x] == road_color &&
+        } else if(right_dir != 1 && binary_image[right_y - 1][right_x] == road_color &&
                   binary_image[right_y - 1][right_x + 1] == border_color){  // 正上黑，方向1，右上白
             right_y = right_y - 1;
             right_dir = 0;

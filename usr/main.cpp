@@ -1,5 +1,7 @@
 #include "main.h"
 
+float CAR_ANGLE_CONVERT = 3.1f;
+
 // PID相关变量
 PID_Incremental left_wheel_speed_pid;
 PID_Incremental right_wheel_speed_pid;
@@ -10,8 +12,13 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float left_speed_setpoint = 60;
-float right_speed_setpoint = 60;
+float speed_setpoint = 0;
+float left_speed_setpoint = 0;
+float right_speed_setpoint = 0;
+
+float turn_pidout = 0;
+float turn_angle = 0;
+float turn_max = 15;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -25,9 +32,15 @@ cv::Mat frame;
 cv::Mat myframe;
 cv::Mat result_image;
 uint8_t gray1ch_image[60][80];
+
 int cornering;
 int image_diff;
 int force_roundabout;
+
+int left_sum;
+int right_sum;
+int start;
+int end;
 
 // 陀螺仪相关变量
 const char* i2c_dev = "/dev/i2c-0";
@@ -36,14 +49,14 @@ int fd = open(i2c_dev, O_RDWR);
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("192.168.5.170", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
 
 void* realtime_task(void* arg) {
-    wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.24, 0, 50000, -50000, false, 0.2f);
+    wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);
 
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
@@ -86,8 +99,8 @@ void* realtime_task(void* arg) {
     int incision_max = 6;
 
     cv::VideoCapture cap;
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 160);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 120);
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 320);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
     cap.set(cv::CAP_PROP_FPS, 120);
     cap.open(0);
     result_image = cv::Mat(60, 80, CV_8UC1);
@@ -101,20 +114,21 @@ void* realtime_task(void* arg) {
             read(timer_fd, &expirations, sizeof(expirations));
 
             // 定时器周期检测
-            // end = std::chrono::steady_clock::now();
-            // std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-            // start = std::chrono::steady_clock::now();
-            // fprintf(stdout,"timer_event 距离上次事件%.2lfms\n", time_used.count() * 1000);
-            // LOGI("timer_event", "距离上次事件%.2lfms", time_used.count() * 1000);
-            // if(std::abs(time_used.count() * 1000 - timer_period) > 1) {
-            //     fprintf(stdout,"timer_event 定时器周期不准确，误差: %.2lfms\n", time_used.count() * 1000 - timer_period);
-            //     LOGW("timer_event", "定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
-            // }
+            end = std::chrono::steady_clock::now();
+            std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+            start = std::chrono::steady_clock::now();
+            fprintf(stdout,"timer_event 距离上次事件%.2lfms\n", time_used.count() * 1000);
+            LOGI("timer_event", "距离上次事件%.2lfms", time_used.count() * 1000);
+            if(std::abs(time_used.count() * 1000 - timer_period) > 1) {
+            fprintf(stdout,"timer_event 定时器周期不准确，误差: %.2lfms\n", time_used.count() * 1000 - timer_period);
+                LOGW("timer_event", "定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
+            }
 
             // 图像处理
             // MEASURE_TIME("rt task", {
             cap >> frame;
-            // vofa.imwrite(frame);
+            // vofa_tcp.imwrite(frame);
+            cv::flip(frame, frame, -1);
             frame.copyTo(myframe);
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
@@ -125,7 +139,9 @@ void* realtime_task(void* arg) {
             my_cv2_threshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, 127, 255);
             memcpy((uint8_t *) gray_binary_image, (const uint8_t *) gray_image, 80 * 60);
             my_cv2_threshold((uint8_t *) gray_binary_image, 80, 0, 0, 80, 60, 128, 255);
-            // vofa.imwrite((uint8_t *)gray_binary_image, 80, 60);
+            bottom_threshold = get_otsu_threshold(0, 40, 80, 60, (const uint8 *) gray_image);
+            my_cv2_threshold((uint8 *) gray_binary_image, 94, 0, 0, 94, 45, bottom_threshold, 255);
+            // vofa_tcp.imwrite((uint8_t *)gray_binary_image, 80, 60);
             bottom_start_end_x_get();
 
             get_max_middle_line_height();
@@ -136,27 +152,70 @@ void* realtime_task(void* arg) {
             get_distance_line();
             get_lost_count();
             check_garage_and_obstacle();
-
             check_ramp();
             check_crossroad();
             check_roundabout();
             get_narrow_line();
-            check_garage_and_obstacle();
             draw_rectan();
+
             int detect_count_max = get_border_line(80);
             // });
-            // vofa.imwrite((uint8_t *)contrast_image, 80, 60);
+            // vofa_tcp.imwrite((uint8_t *)contrast_image, 80, 60);
 
-            vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
+            // vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
 
             Moto_L.update_speed();
             Moto_R.update_speed();
 
-            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float) Moto_L.speed, left_speed_setpoint);
-            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float) Moto_R.speed, right_speed_setpoint);
+            // 位置环PID(需要优化)
+            turn_pidout = PID_Position_Calc(&wheel_turn_pid, 0, (float) icm20602.Gz, (float) image_diff);
+            turn_angle = turn_pidout / 10;
+
+            if(turn_angle > turn_max) turn_angle = turn_max;
+            if(turn_angle < -turn_max) turn_angle = -turn_max;
+
+            float turn_angle_real = turn_angle * CAR_ANGLE_CONVERT * (3.14159265358979323846 / 180);
+
+            if(turn_angle_real == 0) {
+                left_speed_setpoint = speed_setpoint;
+                right_speed_setpoint = speed_setpoint;
+            }
+            else {
+                left_speed_setpoint = fabs(speed_setpoint * (((CAR_WHEELBASE_L / tan(turn_angle_real)) + (CAR_WHEELBASE_B / 2)) / sqrt(pow(CAR_WHEELBASE_L / 2, 2) + pow(CAR_WHEELBASE_L / tan(turn_angle_real), 2))));
+                right_speed_setpoint = fabs(speed_setpoint * (((CAR_WHEELBASE_L / tan(turn_angle_real)) - (CAR_WHEELBASE_B / 2)) / sqrt(pow(CAR_WHEELBASE_L / 2, 2) + pow(CAR_WHEELBASE_L / tan(turn_angle_real), 2))));
+
+                double diff = (left_speed_setpoint > speed_setpoint) ? (left_speed_setpoint - speed_setpoint) : (right_speed_setpoint - speed_setpoint);
+                left_speed_setpoint -= diff;
+                right_speed_setpoint -= diff;
+            }
+
+            Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
+
+            // 速度环PID(需要优化)
+            if(flag.stop){
+                speed_setpoint = 0;
+                left_speed_setpoint = 0;
+                right_speed_setpoint = 0;
+            }
+            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
+            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
 
             Moto_L.set_speed((int)left_wheel_pidout);
             Moto_R.set_speed((int)right_wheel_pidout);
+
+            left_sum = 0;
+            right_sum = 0;
+            int img_start = (0.1 * MAX(Moto_L.speed, Moto_R.speed) - 20);
+            if(img_start < incision)img_start = incision;
+            int img_end = img_start + 45;
+            if(img_end > detect_count_max) img_end = detect_count_max;
+            for(int i = img_start; i < img_end; i++) {
+                left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.0 + (i - (img_end - img_start) / 2) * 0.008);
+                // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
+            }
+            left_sum *= 20;
+            left_sum += 4000 * cornering;
+            image_diff = right_sum - left_sum;
 
             if (switch1()) {
                 beep.beep_on();
@@ -186,7 +245,7 @@ void *non_realtime_task(void *arg) {
     while (running) {
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
-                memcpy(gray1ch_image, gray_image, 80 * 60);
+                memcpy(gray1ch_image, binary_image, 80 * 60);
                 cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
             MEASURE_TIME("detect_time", {
@@ -242,10 +301,10 @@ int main()
     // 创建posix线程
     pthread_t rt_thread;
     pthread_t nrt_thread;
+
     pthread_create(&rt_thread, nullptr, realtime_task, nullptr);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // 运行1秒
     pthread_create(&nrt_thread, nullptr, non_realtime_task, nullptr);
-
     std::this_thread::sleep_for(std::chrono::seconds(1000)); // 运行100秒
 
     running = false; // 停止线程
