@@ -764,14 +764,6 @@ void draw_rectan(){
     }
 }
 
-void cover_car_head(){
-    for(int x = 29; x < 65; x++){
-        for(int y = 39; y < 60; y++){
-            gray_image[y][x] = gray_image[y-1][x];
-        }
-    }
-}
-
 int get_border_line(int detect_count_max) {
     int left_x, left_y, right_x, right_y;  // 爬线时坐标
     left_border_index = 0;  // 爬线时左边界索引
@@ -822,7 +814,7 @@ int get_border_line(int detect_count_max) {
             if(left_skip_index == 0){
                 left_skip_index = left_border_index;
             }
-        } else if(left_y > 77 || (detect_count > 25 && left_x < 3)) {
+        } else if(left_y < 20 || (detect_count > 25 && left_x < 3)) {
             if(left_skip_index == 0){
                 left_skip_index = left_border_index;
             }
@@ -881,7 +873,7 @@ int get_border_line(int detect_count_max) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index;
             }
-        } else if(right_y < 2 || (detect_count > 25 && right_x > 77)) {
+        } else if(right_y < 20 || (detect_count > 25 && right_x > 77)) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index;
             }
@@ -1344,5 +1336,13 @@ void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][
             );
         }
         i++;
+    }
+}
+
+void cover_car_head(){
+    for(int x = 40; x < 60; x++){
+        for(int y = 50; y < 60; y++){
+            gray_image[y][x] = gray_image[y-1][x];
+        }
     }
 }

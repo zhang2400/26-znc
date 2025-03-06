@@ -115,8 +115,6 @@ uint8_t get_otsu_threshold(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, c
 
 void draw_rectan();
 
-void cover_car_head();
-
 int get_border_line(int detect_count_max);
 
 int get_border_line_pers(int detect_count_max);
@@ -139,4 +137,5 @@ uint8_t is_left_corner(float left_Ax, float left_Ay, float left_Bx, float left_B
 uint8_t is_right_corner(float right_Ax, float right_Ay, float right_Bx, float right_By, float right_Cx, float right_Cy,
                       float left_Ax, float left_Ay, float left_Bx, float left_By, float left_Cx, float left_Cy);
 
+void cover_car_head();
 #endif // SMART_CAR_CAMERA_IMAGE_PROCESS_H

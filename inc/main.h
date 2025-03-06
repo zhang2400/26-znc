@@ -32,6 +32,7 @@
 #include <switch.h>
 #include <my_cv2.h>
 #include "image_process.h"
+void element_process(void);
 
 // 图像和传感器数据结构
 struct FrameData {
@@ -64,5 +65,8 @@ private:
     std::atomic<int> head;
     std::atomic<int> tail;
 };
+
+extern int left_lost_count;
+extern int right_lost_count;
 
 #endif //CV_MAIN_H

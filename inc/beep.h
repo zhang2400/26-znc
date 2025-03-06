@@ -12,6 +12,7 @@ public:
 
     void beep_on(void);
     void beep_off(void);
+    void beep_ms(int ms);
 private:
     GPIO beep;
 };

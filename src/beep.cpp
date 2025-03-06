@@ -3,6 +3,9 @@
 //
 
 #include "beep.h"
+
+#include <counter.h>
+
 BEEP::BEEP(int beepnum)
     :beep(beepnum)
 {
@@ -16,4 +19,8 @@ void BEEP::beep_on() {
 
 void BEEP::beep_off() {
     beep.setValue(false);
+}
+
+void BEEP::beep_ms(int ms) {
+    counter.beep_ms = ms;
 }
