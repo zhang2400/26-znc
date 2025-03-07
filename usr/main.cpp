@@ -56,7 +56,7 @@ int i = SERVO_MOTOR_MID;
 int j = 0;
 
 void* realtime_task(void* arg) {
-    wheel_turn_pid = PID_Position_Init(0.042, 0, 0, 0.21, 0, 50000, -50000, true, 0.2f);
+    wheel_turn_pid = PID_Position_Init(0.038, 0, 0, 0.1, 0, 50000, -50000, true, 0.2f);
 
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
@@ -128,7 +128,6 @@ void* realtime_task(void* arg) {
             // MEASURE_TIME("rt task", {
             cap >> frame;
             // vofa_tcp.imwrite(frame);
-            cv::flip(frame, frame, -1);
             frame.copyTo(myframe);
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
@@ -213,10 +212,10 @@ void* realtime_task(void* arg) {
             int img_end = img_start + 40;
             if(img_end > detect_count_max) img_end = detect_count_max;
             for(int i = img_start; i < img_end; i++) {
-                left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.0 + (i - (img_end - img_start) / 2) * 0.06);
+                left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.6 + (i - (img_end - img_start) / 2) * 0.06);
                 // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
             }
-            left_sum *= 6;
+            left_sum *= 4;
             left_sum += 4000 * cornering;
             image_diff = right_sum - left_sum;
 
