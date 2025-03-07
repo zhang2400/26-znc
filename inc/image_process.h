@@ -75,6 +75,21 @@ extern uint8_t    binary_image[60][80];
 extern uint8_t    binary_image_bak[60][80];
 extern uint8_t    contrast_image[60][80];
 extern uint8_t    gray_binary_image[60][80];
+
+// Kalman滤波器结构体（每个坐标轴独立滤波）
+typedef struct {
+    float x_est;   // 状态估计
+    float P;       // 误差协方差
+    float Q;       // 过程噪声 (系统不确定性)
+    float R;       // 观测噪声 (测量不确定性)
+} KalmanFilter;
+
+// 全局滤波器实例（左边界x/y，右边界x/y）
+extern KalmanFilter kf_left_x, kf_left_y;
+extern KalmanFilter kf_right_x, kf_right_y;
+
+void kalman_init(KalmanFilter *kf, float Q, float R);
+
 void bottom_start_end_x_get();
 
 void bottom_start_end_x_get_pers();

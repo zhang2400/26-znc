@@ -42,6 +42,8 @@ int right_sum;
 int start;
 int end;
 
+int dis_index = 0;
+
 // 陀螺仪相关变量
 const char* i2c_dev = "/dev/i2c-0";
 int fd = open(i2c_dev, O_RDWR);
@@ -56,7 +58,7 @@ int i = SERVO_MOTOR_MID;
 int j = 0;
 
 void* realtime_task(void* arg) {
-    wheel_turn_pid = PID_Position_Init(0.038, 0, 0, 0.1, 0, 50000, -50000, true, 0.2f);
+    wheel_turn_pid = PID_Position_Init(0.028, 0, 0, 0.12, 0, 50000, -50000, true, 0.2f);
 
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
@@ -91,7 +93,7 @@ void* realtime_task(void* arg) {
     std::chrono::steady_clock::time_point start;
     std::chrono::steady_clock::time_point end;
 
-    int bottom_threshold = 100;
+    int otsu_threshold = 0;
     int contrast_threshold = 20;
     int canny_lowThreshold = 16;
     int canny_highThreshold = 40;
@@ -137,14 +139,15 @@ void* realtime_task(void* arg) {
             my_cv2_doubleThreshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, canny_lowThreshold, canny_highThreshold);
             my_cv2_checkConnectivity((uint8_t *) binary_image, 80, 0, 0, 80, 60);
             my_cv2_threshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, 127, 255);
+            memcpy((uint8_t *) binary_image_bak, (const uint8_t *) binary_image, 80 * 60);
             memcpy((uint8_t *) gray_binary_image, (const uint8_t *) gray_image, 80 * 60);
-            my_cv2_threshold((uint8_t *) gray_binary_image, 80, 0, 0, 80, 60, 128, 255);
-            bottom_threshold = get_otsu_threshold(0, 40, 80, 60, (const uint8 *) gray_image);
-            my_cv2_threshold((uint8 *) gray_binary_image, 80, 0, 0, 80, 60, bottom_threshold, 255);
-            // vofa_tcp.imwrite((uint8_t *)gray_binary_image, 80, 60);
-            bottom_start_end_x_get();
+            otsu_threshold = get_otsu_threshold(40, 30, 80, 60, (const uint8 *) gray_image);
+            my_cv2_threshold((uint8 *) gray_binary_image, 80, 0, 0, 80, 60, otsu_threshold, 255);
 
-            get_max_middle_line_height();
+            // vofa_tcp.imwrite((uint8_t *)gray_binary_image, 80, 60);
+
+            bottom_start_end_x_get();
+            // get_max_middle_line_height();
 
             incision = incision_max;
             max_white_column_get(bottom_start_x > 10 ? bottom_start_x : 10, 1, bottom_end_x < 64 ? bottom_end_x : 64 , 59);
@@ -155,9 +158,9 @@ void* realtime_task(void* arg) {
             // check_ramp();
             // check_crossroad();
             // check_roundabout();
-            get_narrow_line();
+            // get_narrow_line();
             draw_rectan();
-            element_process();
+            // element_process();
 
             int detect_count_max = get_border_line(100);
             // });
@@ -192,7 +195,11 @@ void* realtime_task(void* arg) {
 
             Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
 
-            vofa_udp.printf("%d,%d,%f,%d,%d,%d\n",image_diff, right_sum, turn_pidout,left_distance[0][0],left_distance[5][0],left_distance[10][0]);
+            // vofa_udp.printf("%d,%d\n",left_lost_count,right_lost_count);
+            // vofa_udp.printf("%d,%d,%d,%d\n",max_white_column.left_x,max_white_column.right_x,max_white_column.start_y,max_white_column.end_y);
+            vofa_udp.printf("%d,%d,%d,%d\n",dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0]);
+            // vofa_udp.printf("%d,%d,%f,%d,%d,%d\n",image_diff, right_sum, turn_pidout,left_distance[0][0],left_distance[5][0],left_distance[10][0]);
+
             // 速度环PID(需要优化)
             if(flag.stop){
                 speed_setpoint = 0;
@@ -212,18 +219,18 @@ void* realtime_task(void* arg) {
             int img_end = img_start + 40;
             if(img_end > detect_count_max) img_end = detect_count_max;
             for(int i = img_start; i < img_end; i++) {
-                left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.6 + (i - (img_end - img_start) / 2) * 0.06);
+                left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.4 + (i - (img_end - img_start) / 2) * 0.06);
                 // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
             }
             left_sum *= 4;
+            left_sum = left_sum < 0 ? left_sum : left_sum *= 3;
             left_sum += 4000 * cornering;
             image_diff = right_sum - left_sum;
 
             if (switch1()) {
-                beep.beep_on();
-            }
-            else {
-                beep.beep_off();
+                dis_index++;
+            }else if (switch2()) {
+                dis_index--;
             }
 
             // icm20602_read_all(fd, &icm20602, 0.01);
@@ -260,7 +267,7 @@ void *non_realtime_task(void *arg) {
     while (running) {
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
-                memcpy(gray1ch_image, gray_image, 80 * 60);
+                memcpy(gray1ch_image, gray_binary_image, 80 * 60);
                 cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
             MEASURE_TIME("detect_time", {
