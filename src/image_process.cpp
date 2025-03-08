@@ -336,8 +336,11 @@ int check_roundabout(){
 
 int check_ramp(){
     flag.found_ramp = false;
-    if((max_white_column.left_x > 30 && max_white_column.right_x < 64 && max_white_column.left_height == 44) &&
-           distances[40] > 11 && abs(distance_middle_line[0][0] - distance_middle_line[40][0]) < 8){
+    if((left_lost_count < 4 && right_lost_count < 4
+        && abs(max_white_column.left_x - max_white_column.right_x) < 10
+        && max_white_column.end_y >= 20
+        && distances[35] == 0
+        && abs(distance_middle_line[0][0] - distance_middle_line[20][0]) < 8)){
         flag.found_ramp = true;
     }
     return flag.found_ramp;
@@ -1346,6 +1349,17 @@ void cover_car_head(){
     for(int x = 40; x < 60; x++){
         for(int y = 50; y < 60; y++){
             gray_image[y][x] = gray_image[y-1][x];
+        }
+    }
+}
+
+void outbounds_detection(void){
+    for(int i = 59;i > 0;i--) {
+        if(gray_binary_image[i][40] == 255) {
+            blind_line = 60 - i;
+        }
+        else {
+            break;
         }
     }
 }

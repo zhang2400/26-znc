@@ -13,6 +13,7 @@
 #include "rev_perspective.h"
 #include "counter.h"
 #include <vofa.h>
+#include "main.h"
 
 
 typedef struct{
@@ -155,4 +156,6 @@ uint8_t is_right_corner(float right_Ax, float right_Ay, float right_Bx, float ri
                       float left_Ax, float left_Ay, float left_Bx, float left_By, float left_Cx, float left_Cy);
 
 void cover_car_head();
+
+void outbounds_detection();
 #endif // SMART_CAR_CAMERA_IMAGE_PROCESS_H
