@@ -300,7 +300,10 @@ void max_white_column_get_pers(int16_t x1, int16_t y1, int16_t x2, int16_t y2){
 
 int check_crossroad(){
     flag.found_crossroad = false;
-    if(left_lost_count > 2 && right_lost_count > 2 && left_lost_count + right_lost_count > 12 && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
+    if(left_lost_count > 10 && right_lost_count > 10 && left_lost_count + right_lost_count > 30
+        && distances[25] > (road_distances[25] + 10) && distances[20] > (10 + road_distances[20])
+        && abs(left_lost_count - right_lost_count) < 10
+        && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;
         counter.drive_in_left_roundabout = 0;
         counter.drive_in_right_roundabout = 0;
@@ -491,7 +494,7 @@ void get_lost_count() {
     right_lost_count = 0;
     left_lost_dir = 0;
     right_lost_dir = 0;
-    int target_distance = 5;
+    int target_distance = 7;
     int target_lost_y1;
     if(force_roundabout == 0){
         target_lost_y1 = 13;
@@ -625,7 +628,7 @@ void get_distance_line(){
             }
         }
         distances[distance_index] = (right_distance_line[distance_index][0] - left_distance_line[distance_index][0]);
-        if(distances[distance_index] < road_distances[distance_index] + 7){
+        if(distances[distance_index] < road_distances[distance_index] + 7 && y > 20){
             distance_middle_line[distance_middle_line_index][0] = (right_distance_line[distance_index][0] + left_distance_line[distance_index][0]) / 2;
             distance_middle_line[distance_middle_line_index][1] = y;
             distance_middle_line_index++;

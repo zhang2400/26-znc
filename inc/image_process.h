@@ -45,6 +45,8 @@ extern int bottom_start_x;
 extern int bottom_end_x;
 extern int bottom_start_x_pers;
 extern int bottom_end_x_pers;
+extern int distance_index;
+extern int distance_middle_line_index;
 extern int middle_line_index;
 extern int middle_line_index_pers;
 

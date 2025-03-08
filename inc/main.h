@@ -33,6 +33,8 @@
 #include <my_cv2.h>
 #include "image_process.h"
 void element_process(void);
+void element_check(void);
+void image_diff_process(void);
 
 // 图像和传感器数据结构
 struct FrameData {
