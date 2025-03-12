@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 40;
+float speed_setpoint = 55;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
@@ -69,8 +69,7 @@ Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
 Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, true);
 
 void* realtime_task(void* arg) {
-    wheel_turn_pid = PID_Position_Init(0.022, 0, 0, 0.24, 0, 50000, -50000, true, 0.2f);
-
+    wheel_turn_pid = PID_Position_Init(0.022, 0, 0, 0.16, 0, 50000, -50000, true, 0.2f);;
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
 
@@ -202,11 +201,12 @@ void* realtime_task(void* arg) {
             Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
 
             // vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
-            vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);
+            // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d\n",max_white_column.left_x,max_white_column.right_x,max_white_column.start_y,max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0],counter.drive_in_ramp, flag.found_ramp);
             // vofa_udp.printf("%d,%d,%d\n",abs(max_white_column.left_x - max_white_column.right_x),max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0]);
             // vofa_udp.printf("%d,%d,%d,%d\n",dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0]);
             // vofa_udp.printf("%d,%d,%f,%d,%d,%d\n",image_diff, right_sum, turn_pidout,left_distance[0][0],left_distance[5][0],left_distance[10][0]);
+            vofa_udp.printf("%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,abs(left_lost_count - right_lost_count),distances[25] - road_distances[25],distances[20] - road_distances[20]);
 
             // 速度环PID(需要优化)
             if(flag.stop){
@@ -303,7 +303,7 @@ void element_process(void) {
 }
 
 void element_check(void) {
-    // check_crossroad();
+    check_crossroad();
     // check_garage_and_obstacle();
     check_ramp();
     // check_roundabout();
@@ -327,11 +327,10 @@ void image_diff_process(void) {
         int img_end = img_start + 40;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
-            left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.8 + (i - (img_end - img_start) / 2) * 0.03);
+            left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.0 + (i - (img_end - img_start) / 2) * 0.12);
             // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
         }
-        left_sum *= 4;
-        left_sum = left_sum < 0 ? left_sum : left_sum *= 4;
+        left_sum *= 5;
         left_sum += 4000 * cornering;
         image_diff = right_sum - left_sum;
     }
@@ -349,7 +348,7 @@ void *non_realtime_task(void *arg) {
     while (running) {
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
-                memcpy(gray1ch_image, binary_image, 80 * 60);
+                memcpy(gray1ch_image, gray_image, 80 * 60);
                 cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
             MEASURE_TIME("detect_time", {

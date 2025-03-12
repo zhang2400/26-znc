@@ -300,8 +300,8 @@ void max_white_column_get_pers(int16_t x1, int16_t y1, int16_t x2, int16_t y2){
 
 int check_crossroad(){
     flag.found_crossroad = false;
-    if(left_lost_count > 10 && right_lost_count > 10 && left_lost_count + right_lost_count > 30
-        && distances[25] > (road_distances[25] + 10) && distances[20] > (10 + road_distances[20])
+    if(left_lost_count > 8 && right_lost_count > 8 && left_lost_count + right_lost_count > 25
+        && distances[25] > (road_distances[25] + 15) && distances[20] > (10 + road_distances[20])
         && abs(left_lost_count - right_lost_count) < 10
         && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;

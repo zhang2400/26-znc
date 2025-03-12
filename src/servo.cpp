@@ -13,6 +13,7 @@ Servo::Servo(int pwm_channel, uint32_t freq_hz, float min_angle, float max_angle
     set_frequency(freq_hz);
     set_angle(mid_angle_);
     enable();
+    printf("servo initialized\n");
 }
 
 void Servo::set_angle(float angle) {
