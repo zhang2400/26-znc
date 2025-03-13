@@ -38,6 +38,10 @@ typedef struct{
 #define MT9V03X_W               (188)
 #define MT9V03X_H               (90)
 #define MT9V03X_IMAGE_SIZE      (MT9V03X_WS * MT9V03X_HS)
+
+#define LQU_CAM_W               (320)
+#define LQU_CAM_H               (240)
+#define LQU_CAM_IMAGE_SIZE      (LQU_CAM_W * LQU_CAM_H)
 extern Max_White_Column max_white_column;
 extern Max_White_Column max_white_column_pers;
 //extern Max_White_Row max_white_row;
@@ -73,6 +77,7 @@ extern uint8_t distance_middle_line[100][2];
 extern uint8_t distance_middle_line_pers[100][2];
 extern uint8_t narrow_line[100][2];
 extern uint8_t    mt9v03x_image[MT9V03X_HS][MT9V03X_WS];
+extern uint8_t    LQU_CAM_image[LQU_CAM_H][LQU_CAM_W];
 extern uint8_t    gray_image[60][80];
 extern uint8_t    binary_image[60][80];
 extern uint8_t    binary_image_bak[60][80];

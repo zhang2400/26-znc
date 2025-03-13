@@ -79,6 +79,8 @@ void* realtime_task(void* arg) {
 
     icm20602_init(fd);
 
+    InitLookupTable();
+
     // 设置实时线程优先级
     struct sched_param param = {.sched_priority = 99};
     pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);

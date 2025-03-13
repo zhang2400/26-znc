@@ -5,6 +5,7 @@
 #include "image_process.h"
 
 uint8_t    mt9v03x_image[MT9V03X_HS][MT9V03X_WS];
+uint8_t    LQU_CAM_image[LQU_CAM_H][LQU_CAM_W];
 uint8_t    gray_image[60][80];
 uint8_t    binary_image[60][80];
 uint8_t    binary_image_bak[60][80];
