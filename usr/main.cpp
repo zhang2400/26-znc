@@ -139,9 +139,11 @@ void* realtime_task(void* arg) {
             cap >> frame;
             // vofa_tcp.imwrite(frame);
             frame.copyTo(myframe);
+            memcpy(LQU_CAM_image, myframe.data, 320 * 240);
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
             // cover_car_head();
+             ImagePerspective();
             calculate_contrast_x8((uint8_t *)contrast_image, (const uint8_t *)gray_image, 80, 60);
             memcpy((uint8_t *) binary_image, (const uint8_t *) contrast_image, 80 * 60);
             my_cv2_doubleThreshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, canny_lowThreshold, canny_highThreshold);
@@ -319,7 +321,7 @@ void image_diff_process(void) {
         for(int i = 0; i < distance_middle_line_index; i++){
             left_sum -= (distance_middle_line[i][0] - IMAGE_MIDDLE);
         }
-        left_sum *= 20;
+        left_sum *= 17;
         image_diff = right_sum - left_sum;
     }else {
         left_sum = 0;
@@ -374,7 +376,9 @@ void *non_realtime_task(void *arg) {
                 tft180_draw_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
                 tft180_draw_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0, 0));
             // MEASURE_TIME("http write", {
-                vofa_tcp.imwrite(gray3ch);
+                // vofa_tcp.imwrite(gray3ch);
+                cv::Mat cv_image(60, 60, CV_8UC1, gray_pers_image); // 60行40列的灰度图
+                vofa_tcp.imwrite(cv_image);
                 // http << gray3ch;
             // });
     }
