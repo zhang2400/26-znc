@@ -33,10 +33,11 @@ include_directories(${apriltag_INCLUDE_DIRS})
 
 # 源文件列表
 file(GLOB SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+file(GLOB SRCC_FILES "${CMAKE_SOURCE_DIR}/src/*.c")
 file(GLOB CODE_FILES "${CMAKE_SOURCE_DIR}/usr/*.cpp")
 
 # 合并源文件
-set(SOURCES ${SRC_FILES} ${CODE_FILES}
+set(SOURCES ${SRC_FILES} ${CODE_FILES} ${SRCC_FILES}
 )
 
 # 创建可执行文件

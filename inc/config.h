@@ -47,8 +47,6 @@ enum Polarity {
 #define SERVO_MOTOR_PWM             (GTIM1_GPIO88)                 // 定义主板上舵机对应引脚
 #define SERVO_MOTOR_FREQ            (50)              // 定义主板上舵机频率
 
-#define GYROZ_CORRECT_DEFAULT -0.2
-
 // 占空比最大值
 #define PWM_DUTY_MAX 10000
 

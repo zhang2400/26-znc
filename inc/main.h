@@ -23,7 +23,6 @@
 
 #include "config.h"
 #include "pwm.h"
-#include "icm20602.h"
 #include <beep.h>
 #include "PID.h"
 #include <moto.h>
@@ -32,7 +31,9 @@
 #include <switch.h>
 #include <my_cv2.h>
 #include "image_process.h"
+#include "icm20948.h"
 
+void element_count(void);
 void element_process(void);
 void element_check(void);
 void image_diff_process(void);
