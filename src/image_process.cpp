@@ -83,7 +83,6 @@ int right_lost_dir;
 
 extern int cornering;
 extern int image_diff;
-extern int force_roundabout;
 extern VOFA vofa_udp;
 void bottom_start_end_x_get(){
     int maxStartIndex = -1;
@@ -317,19 +316,14 @@ int check_crossroad(){
 int check_roundabout(){
     flag.found_left_roundabout = false;
     flag.found_right_roundabout = false;
-    int target_left_lost_count;
-    int target_right_lost_count;
-    if(force_roundabout == 0){
-        target_left_lost_count = 3;
-        target_right_lost_count = 3;
-    } else {
-        target_left_lost_count = 3;
-        target_right_lost_count = 3;
+    int target_left_lost_count = 3;
+    int target_right_lost_count = 3;
+
+    if (left_lost_count > target_left_lost_count && right_lost_count == 0 && id == 0) {
+        flag.found_left_roundabout= true;
     }
-    if(left_lost_count > target_left_lost_count && right_lost_count == 0 && (right_lost_dir == 0 || force_roundabout == 1)){
-        flag.found_left_roundabout = true;
-    }
-    if(right_lost_count > target_right_lost_count && left_lost_count == 0 && (left_lost_dir == 0 || force_roundabout == 1)){
+
+    if (right_lost_count > target_right_lost_count && left_lost_count == 0 && id == 1){
         flag.found_right_roundabout = true;
     }
     return flag.found_left_roundabout || flag.found_right_roundabout;
@@ -499,12 +493,8 @@ void get_lost_count() {
     left_lost_dir = 0;
     right_lost_dir = 0;
     int target_distance = 7;
-    int target_lost_y1;
-    if(force_roundabout == 0){
-        target_lost_y1 = 13;
-    } else {
-        target_lost_y1 = 13;
-    }
+    int target_lost_y1 = 13;
+
     if (lost_x1 == 0 || lost_y1 == 0 || lost_x2 == 0 || lost_y2 == 0 || max_white_column.left_height < 39 || lost_y1 < target_lost_y1) {
         return;
     }

@@ -99,13 +99,13 @@ void mytag::draw(cv::Mat &frame) {
 
         // 在框架上绘制检测到的标签
         line(frame,cv::Point((int)det->p[0][0], (int)det->p[0][1]),
-                 cv::Point((int)det->p[1][0], (int)det->p[1][1]), color, 2);
+                 cv::Point((int)det->p[1][0], (int)det->p[1][1]), color, 1);
         line(frame, cv::Point((int)det->p[1][0], (int)det->p[1][1]),
-                 cv::Point((int)det->p[2][0], (int)det->p[2][1]), color, 2);
+                 cv::Point((int)det->p[2][0], (int)det->p[2][1]), color, 1);
         line(frame,cv::Point((int)det->p[2][0], (int)det->p[2][1]),
-                 cv::Point((int)det->p[3][0], (int)det->p[3][1]), color, 2);
+                 cv::Point((int)det->p[3][0], (int)det->p[3][1]), color, 1);
         line(frame, cv::Point((int)det->p[3][0], (int)det->p[3][1]),
-                 cv::Point((int)det->p[0][0], (int)det->p[0][1]), color, 2);
+                 cv::Point((int)det->p[0][0], (int)det->p[0][1]), color, 1);
         putText(frame, std::to_string((int)det->id), cv::Point((int)det->c[0], (int)det->c[1]), cv::FONT_HERSHEY_SIMPLEX, 1, color, 2);
     }
 }

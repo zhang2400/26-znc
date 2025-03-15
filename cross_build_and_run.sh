@@ -19,7 +19,7 @@ fi
 
 # 运行 CMake 配置
 echo "Configuring project with CMake..."
-cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_C_COMPILER=$toolchain_path"gcc" -DCMAKE_CXX_COMPILER=$toolchain_path"g++" -DUSE_LOONGARCH=ON -G Ninja -S . -B cmake-build-cross
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_C_COMPILER=$toolchain_path"gcc" -DCMAKE_CXX_COMPILER=$toolchain_path"g++" -DUSE_LOONGARCH=ON -G Ninja -S . -B cmake-build-cross
 
 # 运行 CMake 构建
 echo "Building project with Ninja..."

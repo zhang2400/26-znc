@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 55;
+float speed_setpoint = 60;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
@@ -35,7 +35,6 @@ uint8_t gray1ch_image[60][80];
 
 int cornering;
 int image_diff;
-int force_roundabout;
 
 int left_sum;
 int right_sum;
@@ -68,8 +67,11 @@ BEEP beep(GPIO61);
 Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
 Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, true);
 
+// tag码相关变量
+int id;
+
 void* realtime_task(void* arg) {
-    wheel_turn_pid = PID_Position_Init(0.022, 0, 0, 0.16, 0, 50000, -50000, true, 0.2f);;
+    wheel_turn_pid = PID_Position_Init(0.016, 0, 0, 0.12, 0, 50000, -50000, false, 0.2f);;
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
 
@@ -115,6 +117,7 @@ void* realtime_task(void* arg) {
 
     beep.beep_ms(500);
 
+
     while (running) {
         // 等待定时器事件
         struct epoll_event events[1];
@@ -127,32 +130,35 @@ void* realtime_task(void* arg) {
             end = std::chrono::steady_clock::now();
             std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
             start = std::chrono::steady_clock::now();
-            fprintf(stdout,"timer_event 距离上次事件%.2lfms\n", time_used.count() * 1000);
+            // fprintf(stdout,"timer_event 距离上次事件%.2lfms\n", time_used.count() * 1000);
             LOGI("timer_event", "距离上次事件%.2lfms", time_used.count() * 1000);
             if(std::abs(time_used.count() * 1000 - timer_period) > 1) {
-            fprintf(stdout,"timer_event 定时器周期不准确，误差: %.2lfms\n", time_used.count() * 1000 - timer_period);
+                // fprintf(stdout,"timer_event 定时器周期不准确，误差: %.2lfms\n", time_used.count() * 1000 - timer_period);
                 LOGW("timer_event", "定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
+
+            // MEASURE_TIME("realtime_task_cost", {
 
             // 图像处理
             // MEASURE_TIME("rt task", {
             cap >> frame;
             // vofa_tcp.imwrite(frame);
             frame.copyTo(myframe);
-            memcpy(LQU_CAM_image, myframe.data, 320 * 240);
+            // memcpy(LQU_CAM_image, myframe.data, 320 * 240);
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
             // cover_car_head();
-             ImagePerspective();
+             // ImagePerspective();
             calculate_contrast_x8((uint8_t *)contrast_image, (const uint8_t *)gray_image, 80, 60);
             memcpy((uint8_t *) binary_image, (const uint8_t *) contrast_image, 80 * 60);
             my_cv2_doubleThreshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, canny_lowThreshold, canny_highThreshold);
             my_cv2_checkConnectivity((uint8_t *) binary_image, 80, 0, 0, 80, 60);
+
             my_cv2_threshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, 127, 255);
             memcpy((uint8_t *) binary_image_bak, (const uint8_t *) binary_image, 80 * 60);
             memcpy((uint8_t *) gray_binary_image, (const uint8_t *) gray_image, 80 * 60);
-            otsu_threshold = get_otsu_threshold(40, 30, 80, 60, (const uint8 *) gray_image);
-            my_cv2_threshold((uint8 *) gray_binary_image, 80, 0, 0, 80, 60, otsu_threshold, 255);
+            otsu_threshold = get_otsu_threshold(0, 30, 80, 60, (const uint8 *) gray_image);
+            my_cv2_threshold((uint8 *) gray_binary_image, 80, 0, 55, 80, 60, otsu_threshold, 255);
 
             // vofa_tcp.imwrite((uint8_t *)gray_binary_image, 80, 60);
 
@@ -210,7 +216,8 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d\n",abs(max_white_column.left_x - max_white_column.right_x),max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0]);
             // vofa_udp.printf("%d,%d,%d,%d\n",dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0]);
             // vofa_udp.printf("%d,%d,%f,%d,%d,%d\n",image_diff, right_sum, turn_pidout,left_distance[0][0],left_distance[5][0],left_distance[10][0]);
-            vofa_udp.printf("%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,abs(left_lost_count - right_lost_count),distances[25] - road_distances[25],distances[20] - road_distances[20]);
+            // vofa_udp.printf("%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,abs(left_lost_count - right_lost_count),distances[25] - road_distances[25],distances[20] - road_distances[20]);
+            vofa_udp.printf("%d\n",id);
 
             // 速度环PID(需要优化)
             if(flag.stop){
@@ -251,8 +258,10 @@ void* realtime_task(void* arg) {
             if(counter.out_of_bound > 20) {
                 flag.stop = true;
             }
+            // });
         }
     }
+
 
     close(timer_fd);
     close(epoll_fd);
@@ -275,7 +284,7 @@ void element_process(void) {
         counter.drive_in_crossroad = 2000;
     } else if(distances[5] < road_distances[5] + 5 && rstate == 1){
         rstate = 0;
-        counter.drive_in_crossroad = 0;
+        counter.drive_in_crossroad = 150;
         beep.beep_ms(200);
     }
 
@@ -331,7 +340,7 @@ void image_diff_process(void) {
         int img_end = img_start + 40;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
-            left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.0 + (i - (img_end - img_start) / 2) * 0.12);
+            left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.5 + (i - (img_end - img_start) / 2) * 0.14);
             // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
         }
         left_sum *= 5;
@@ -343,44 +352,45 @@ void image_diff_process(void) {
 // 非实时任务线程函数
 void *non_realtime_task(void *arg) {
     auto atag = mytag("tag36h11", 1.5, 0, 1, false, false);
-    int id;
     cv::Mat gray;
     cv::Mat gray1ch(60, 80, CV_8UC1, (void*)gray1ch_image);
     cv::Mat gray3ch;
     double distance;
     std::vector<uchar> jpg;
+    int iii=0;
     while (running) {
+            fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
-            // MEASURE_TIME("non rt task", {
+            MEASURE_TIME("non rt task", {
                 memcpy(gray1ch_image, gray_image, 80 * 60);
                 cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
-            MEASURE_TIME("detect_time", {
+            // MEASURE_TIME("detect_time", {
                 atag.detect(gray);
-            });
+            // });
             // MEASURE_TIME("getclosettagindex", {
                 atag.getClosetTagIndex();
-//            });
-//            MEASURE_TIME("draw", {
+            // });
+            // MEASURE_TIME("draw", {
                 atag.draw(gray3ch, 0.25);
-//            });detect_count_max:
-//            MEASURE_TIME("getid", {
+            // });detect_count_max:
+            // MEASURE_TIME("getid", {
                 id = atag.getClosetTagID();
-//            });
-//            MEASURE_TIME("getdistance", {
+            // });
+            // MEASURE_TIME("getdistance", {
                 distance = atag.getClosetTagDistance(1500);
                 // cv::putText(gray3ch, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
-//            });
+            // });
                 tft180_draw_border_line(gray3ch, 0,0,left_border, cv::Scalar(0, 0xff, 0));
                 tft180_draw_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0, 0xff, 0));
                 tft180_draw_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
                 tft180_draw_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0, 0));
             // MEASURE_TIME("http write", {
-                // vofa_tcp.imwrite(gray3ch);
-                cv::Mat cv_image(60, 60, CV_8UC1, gray_pers_image); // 60行40列的灰度图
-                vofa_tcp.imwrite(cv_image);
+                vofa_tcp.imwrite(gray3ch);
+                // cv::Mat cv_image(60, 60, CV_8UC1, gray_pers_image); // 60行60列的灰度图
+                // vofa_tcp.imwrite(cv_image);
                 // http << gray3ch;
-            // });
+            });
     }
     return nullptr;
 }
