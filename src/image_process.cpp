@@ -319,11 +319,11 @@ int check_roundabout(){
     int target_left_lost_count = 3;
     int target_right_lost_count = 3;
 
-    if (left_lost_count > target_left_lost_count && right_lost_count == 0 && id == 0) {
+    if (right_lost_count == 0 && id == 0) {
         flag.found_left_roundabout= true;
     }
 
-    if (right_lost_count > target_right_lost_count && left_lost_count == 0 && id == 1){
+    if (left_lost_count == 0 && id == 1){
         flag.found_right_roundabout = true;
     }
     return flag.found_left_roundabout || flag.found_right_roundabout;
@@ -770,11 +770,16 @@ int get_border_line(int detect_count_max) {
     int left_dir;  // 爬线时左边界方向
     int right_dir;  // 爬线时右边界方向
     int detect_count;  // 爬线时检测次数
-
+    int left_reach_edge = 0;
+    int right_reach_edge = 0;
+    flag.need_sec_border = false;
+    flag.left_sec_border = false;
+    flag.right_sec_border = false;
+    flag.left_border = true;
+    flag.right_border = true;
 
     road_color = 0;
     border_color = 255;
-
 
     memset(left_border, 0, sizeof(left_border));
     memset(right_border, 0, sizeof(right_border));
@@ -791,7 +796,7 @@ int get_border_line(int detect_count_max) {
         }
     }
 
-    for (first_x = (bottom_start_x + bottom_end_x)/2; first_x < 80; first_x++) {
+    for (first_x = (bottom_start_x + bottom_end_x) / 2; first_x < 80; first_x++) {
         if (binary_image[first_y][first_x] == road_color && binary_image[first_y][first_x + 1] != road_color) {
             right_border[right_border_index][0] = first_x;
             right_border[right_border_index][1] = first_y;
@@ -856,9 +861,14 @@ int get_border_line(int detect_count_max) {
             break;
         }
 
+        if (left_x < 3) left_reach_edge++;
+        if (left_x > 3) flag.left_border = false;
+        if (left_x > 40) flag.need_sec_border = true;
         left_border_index++;
-        left_border[left_border_index][0] = left_x;
-        left_border[left_border_index][1] = left_y;
+        if (left_border_index != 0){
+            left_border[left_border_index][0] = left_x;
+            left_border[left_border_index][1] = left_y;
+        }
         left_dirs[left_border_index] = left_dir;
 
         if(left_x == right_x && left_y == right_y){
@@ -914,9 +924,14 @@ int get_border_line(int detect_count_max) {
         } else {
             break;
         }
+        if (right_x > 77) right_reach_edge++;
+        if (right_x < 77) flag.right_border = false;
+        if (right_x < 40) flag.need_sec_border = true;
         right_border_index++;
-        right_border[right_border_index][0] = right_x;
-        right_border[right_border_index][1] = right_y;
+        if (right_border_index != 0){
+            right_border[right_border_index][0] = right_x;
+            right_border[right_border_index][1] = right_y;
+        }
         right_dirs[right_border_index] = right_dir;
 
         if(left_x == right_x && left_y == right_y){
@@ -925,6 +940,25 @@ int get_border_line(int detect_count_max) {
     }
     detect_count_max = detect_count;
 
+    if (left_reach_edge >= 15) {
+        flag.left_sec_border = true;
+    }else if (right_reach_edge >= 15) {
+        flag.right_sec_border = true;
+    }
+
+    if (flag.need_sec_border && flag.left_sec_border && flag.left_border) {
+        for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
+            left_border[detect_count][0] = 3;
+            left_border[detect_count][1] = 58;
+        }
+    }
+
+    if (flag.need_sec_border && flag.right_sec_border && flag.right_border) {
+        for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
+            right_border[detect_count][0] = 78;
+            right_border[detect_count][1] = 58;
+        }
+    }
     // 计算中线
     memset(middle_line, 0, sizeof(middle_line));
     middle_line_index = 0;
@@ -1319,7 +1353,7 @@ void calculate_contrast_x8(uint8_t *dst_image, const uint8_t *src_image, int16_t
 
 void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
     const int max_points = 100;
-    int i = 0;
+    int i = 2;
 
     while (i < max_points && (line[i][0] != 0 || line[i][1] != 0)) {
         const int px = x + line[i][0];

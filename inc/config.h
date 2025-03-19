@@ -30,7 +30,7 @@ enum Polarity {
 
 // 图像处理
 #define DISTANCE(x1, y1, x2, y2) sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2))
-#define IMAGE_MIDDLE            37
+#define IMAGE_MIDDLE            35
 
 // MATH
 #define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))

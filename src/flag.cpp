@@ -5,6 +5,11 @@
 
 //标志位结构体初始化
 Flag flag = {
+        .need_sec_border = false,
+        .left_sec_border = false,
+        .right_sec_border = false,
+        .left_border = false,
+        .right_border = false,
         .drive_in_garage = false,
         .drive_out_garage = true,
         .change_speed_setpoint = true,
