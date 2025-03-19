@@ -63,6 +63,8 @@ int bottom_end_x;
 int bottom_start_x_pers;
 int bottom_end_x_pers;
 
+int left_reach_edge = 0;
+int right_reach_edge = 0;
 int t1,t2;
 
 uint8_t road_color = 0;  // 道路颜色
@@ -303,6 +305,7 @@ int check_crossroad(){
     if(left_lost_count > 8 && right_lost_count > 8 && left_lost_count + right_lost_count > 25
         && distances[25] > (road_distances[25] + 15) && distances[20] > (10 + road_distances[20])
         && abs(left_lost_count - right_lost_count) < 10
+        && left_reach_edge > 40 && right_reach_edge > 40
         && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;
         counter.drive_in_left_roundabout = 0;
@@ -767,11 +770,11 @@ int get_border_line(int detect_count_max) {
     right_border_index = 0;  // 爬线时右边界索引
     left_skip_index = 0;  // 爬线时左边界跳过索引
     right_skip_index = 0;  // 爬线时右边界跳过索引
+    left_reach_edge = 0;
+    right_reach_edge = 0;
     int left_dir;  // 爬线时左边界方向
     int right_dir;  // 爬线时右边界方向
     int detect_count;  // 爬线时检测次数
-    int left_reach_edge = 0;
-    int right_reach_edge = 0;
     flag.need_sec_border = false;
     flag.left_sec_border = false;
     flag.right_sec_border = false;

@@ -83,7 +83,7 @@ void mytag::detect(const cv::Mat& gray) {
         .width = gray.cols,
         .height = gray.rows / 3,
         .stride = gray.cols,
-        .buf = gray.data + gray.cols * 40
+        .buf = gray.data + gray.cols * 25
     };
 
     // 使用AprilTag检测标签
@@ -116,7 +116,7 @@ void mytag::draw(cv::Mat &frame, double zoom) {
         cv::Scalar color = (i == closestTagIndex) ? cv::Scalar(0, 0xff, 0) : cv::Scalar(0, 0, 0xff);
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
-        int offset = 40;
+        int offset = 25;
         // 在框架上绘制检测到的标签
         line(frame,cv::Point((int)(det->p[0][0] * zoom), (int)((det->p[0][1] + offset) * zoom)),
                       cv::Point((int)(det->p[1][0] * zoom), (int)((det->p[1][1] + offset) * zoom)), color, 1);

@@ -54,6 +54,8 @@ extern int distance_index;
 extern int distance_middle_line_index;
 extern int middle_line_index;
 extern int middle_line_index_pers;
+extern int left_reach_edge;
+extern int right_reach_edge;
 
 extern uint8_t left_border[100][2];  // ×ó±ß½ç
 extern uint8_t right_border[100][2];  // ÓÒ±ß½ç
