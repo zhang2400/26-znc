@@ -12,13 +12,16 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 62;
+float speed_setpoint = 50;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
 float turn_pidout = 0;
 float turn_angle = 0;
 float turn_max = 15;
+
+float Kp_max = 0.017f;
+float Kd_max = 0.018f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -59,8 +62,8 @@ auto vofa_tcp = VOFA(std::move(tcp_transport));
 auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
-int incision = 6;
-int incision_max = 6;
+int incision = 12;
+int incision_max = 12;
 int detect_count_max = 0;
 
 int blind_line;
@@ -76,7 +79,7 @@ Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, true);
 int id;
 
 void* realtime_task(void* arg) {
-    wheel_turn_pid = PID_Position_Init(0.032, 0, 0, 0.24, 0, 50000, -50000, false, 0.2f);;
+    wheel_turn_pid = PID_Position_Init(0.0025, 0, 0, 0.02, 0, 50000, -50000, false, 0.2f);;
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
 
@@ -159,13 +162,14 @@ void* realtime_task(void* arg) {
             memcpy(gray_image, myframe.data, 80 * 60);
             // cover_car_head();
             // ImagePerspective();
-            MEASURE_TIME("rt task", {
+
             calculate_contrast_x8((uint8_t *)contrast_image, (const uint8_t *)gray_image, 80, 60);
-            });
             memcpy((uint8_t *) binary_image, (const uint8_t *) contrast_image, 80 * 60);
+            MEASURE_TIME("rt task", {
             my_cv2_doubleThreshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, canny_lowThreshold, canny_highThreshold);
             my_cv2_checkConnectivity((uint8_t *) binary_image, 80, 0, 0, 80, 60);
             my_cv2_threshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, 127, 255);
+            });
             memcpy((uint8_t *) binary_image_bak, (const uint8_t *) binary_image, 80 * 60);
             memcpy((uint8_t *) gray_binary_image, (const uint8_t *) gray_image, 80 * 60);
             otsu_threshold = get_otsu_threshold(0, 40, 80, 60, (const uint8 *) gray_image);
@@ -188,12 +192,22 @@ void* realtime_task(void* arg) {
             element_count();
             element_process();
 
-            detect_count_max = get_border_line(100);
+            detect_count_max = get_border_line(80);
             outbounds_detection();
             // });
             // vofa_tcp.imwrite((uint8_t *)contrast_image, 80, 60);
 
             // vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
+
+            // 动态Kp，Kd
+            if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
+                (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
+                wheel_turn_pid.Kp = Kp_max * 1.8;
+                wheel_turn_pid.Kd = Kd_max * 1.2;
+            }else{
+                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 5500)) + 0.3);
+                wheel_turn_pid.Kd = Kd_max * (0.75 * (tanh(fabs((double)image_diff) / 6000)) + 0.25);
+            }
 
             Moto_L.update_speed();
             Moto_R.update_speed();
@@ -227,7 +241,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d\n",max_white_column.left_x,max_white_column.right_x,max_white_column.start_y,max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0],counter.drive_in_ramp, flag.found_ramp);
             // vofa_udp.printf("%d,%d,%d\n",abs(max_white_column.left_x - max_white_column.right_x),max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0]);
             // vofa_udp.printf("%d,%d,%d,%d\n",dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0]);
-            vofa_udp.printf("%d,%d,%.1f\n",image_diff, right_sum, turn_pidout);
+            vofa_udp.printf("%d,%d,%.1f,%.3f,%.3f\n",image_diff, right_sum, turn_pidout, wheel_turn_pid.Kp, wheel_turn_pid.Kd);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,abs(left_lost_count - right_lost_count),distances[25] - road_distances[25],distances[20] - road_distances[20]);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_left_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",dis_index,left_border[dis_index][0],right_border[dis_index][0],left_border[dis_index][1],right_border[dis_index][1]);
@@ -260,7 +274,7 @@ void* realtime_task(void* arg) {
                 beep.beep_off();
             }
 
-            if(blind_line <= 3 && abs(bottom_start_x - bottom_end_x) <= 20) {
+            if(blind_line <= 4 && abs(bottom_start_x - bottom_end_x) <= 30) {
                 counter.out_of_bound += 5;
             }else {
                 flag.stop = false;
@@ -444,7 +458,7 @@ void image_diff_process(void) {
     }else {
         left_sum = 0;
         right_sum = 0;
-        int img_start = (0.1 * MAX(Moto_L.speed, Moto_R.speed) - 20);
+        int img_start = 12;
         if(img_start < incision)img_start = incision;
         int img_end = img_start + 45;
         if(img_end > detect_count_max) img_end = detect_count_max;
@@ -471,8 +485,8 @@ void *non_realtime_task(void *arg) {
             // fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
+                memcpy(gray1ch_image,binary_image , 80 * 60);
                 // memcpy(gray1ch_image, binary_image, 80 * 60);
-                memcpy(gray1ch_image, binary_image, 80 * 60);
                 cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
             MEASURE_TIME("detect_time", {
@@ -526,7 +540,7 @@ int main()
     }
     LOGW("MAIN", "Application starting...");
 
-    system("v4l2-ctl -d /dev/video0 -c contrast=38 -c gamma=100 -c exposure_auto=1 -c exposure_absolute=200");
+    system("v4l2-ctl -d /dev/video0 -c contrast=36 -c gamma=80 -c exposure_auto=1 -c exposure_absolute=85 -c sharpness=55");
 
     // 创建posix线程
     pthread_t rt_thread;

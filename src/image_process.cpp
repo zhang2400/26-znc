@@ -943,9 +943,9 @@ int get_border_line(int detect_count_max) {
     }
     detect_count_max = detect_count;
 
-    if (left_reach_edge >= 15) {
+    if (left_reach_edge >= 8) {
         flag.left_sec_border = true;
-    }else if (right_reach_edge >= 15) {
+    }else if (right_reach_edge >= 8) {
         flag.right_sec_border = true;
     }
 
