@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 50;
+float speed_setpoint = 65;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
@@ -20,8 +20,8 @@ float turn_pidout = 0;
 float turn_angle = 0;
 float turn_max = 15;
 
-float Kp_max = 0.017f;
-float Kd_max = 0.018f;
+float Kp_max = 0.022f;
+float Kd_max = 0.22f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -67,6 +67,7 @@ int incision_max = 12;
 int detect_count_max = 0;
 
 int blind_line;
+int protect = 1;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
@@ -79,7 +80,7 @@ Moto Moto_R(PWM2_GPIO66, 74, PWM3_GPIO67, 72, true);
 int id;
 
 void* realtime_task(void* arg) {
-    wheel_turn_pid = PID_Position_Init(0.0025, 0, 0, 0.02, 0, 50000, -50000, false, 0.2f);;
+    wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
     left_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(45, 6, 4, 7000, -7000, false, 0.25f);
 
@@ -201,12 +202,12 @@ void* realtime_task(void* arg) {
 
             // 动态Kp，Kd
             if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
-                (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
-                wheel_turn_pid.Kp = Kp_max * 1.8;
+                (flag.need_sec_border && flag.left_sec_border && flag.left_border)){
+                wheel_turn_pid.Kp = Kp_max * 1.4;
                 wheel_turn_pid.Kd = Kd_max * 1.2;
             }else{
-                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 5500)) + 0.3);
-                wheel_turn_pid.Kd = Kd_max * (0.75 * (tanh(fabs((double)image_diff) / 6000)) + 0.25);
+                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 6000)) + 0.3);
+                wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 10000)) + 0.4);
             }
 
             Moto_L.update_speed();
@@ -241,13 +242,14 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d\n",max_white_column.left_x,max_white_column.right_x,max_white_column.start_y,max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0],counter.drive_in_ramp, flag.found_ramp);
             // vofa_udp.printf("%d,%d,%d\n",abs(max_white_column.left_x - max_white_column.right_x),max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0]);
             // vofa_udp.printf("%d,%d,%d,%d\n",dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0]);
-            vofa_udp.printf("%d,%d,%.1f,%.3f,%.3f\n",image_diff, right_sum, turn_pidout, wheel_turn_pid.Kp, wheel_turn_pid.Kd);
+            vofa_udp.printf("%d,%d,%d,%.3f,%.3f\n",image_diff, flag.drive_in_crossroad, counter.drive_in_crossroad, wheel_turn_pid.Kp, wheel_turn_pid.Kd);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,abs(left_lost_count - right_lost_count),distances[25] - road_distances[25],distances[20] - road_distances[20]);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_left_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",dis_index,left_border[dis_index][0],right_border[dis_index][0],left_border[dis_index][1],right_border[dis_index][1]);
             // vofa_udp.printf("%d,%d\n",bottom_start_x,bottom_end_x);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,left_lost_count+right_lost_count,distances[25] - road_distances[25], distances[20]-road_distances[20],abs(left_lost_count - right_lost_count),left_reach_edge,right_reach_edge);
 
-            // 速度环PID(需要优化)
+            // 速度环PID
             if(flag.stop){
                 speed_setpoint = 0;
                 left_speed_setpoint = 0;
@@ -274,7 +276,8 @@ void* realtime_task(void* arg) {
                 beep.beep_off();
             }
 
-            if(blind_line <= 4 && abs(bottom_start_x - bottom_end_x) <= 30) {
+            // 出界检测
+            if(blind_line <= 2 && abs(bottom_start_x - bottom_end_x) <= 30) {
                 counter.out_of_bound += 5;
             }else {
                 flag.stop = false;
@@ -282,6 +285,22 @@ void* realtime_task(void* arg) {
             }
             if(counter.out_of_bound > 20) {
                 flag.stop = true;
+            }
+
+            // 电机堵转或编码器异常时停止电机
+            if(protect == 1) {
+                if ((abs(Moto_L.speed) < 10 && abs(left_speed_setpoint) > 25) ||
+                    (abs(Moto_R.speed) < 10 && abs(right_speed_setpoint) > 25)) {
+                    if (flag.start == true && counter.start_motor_delay >= 6000) {
+                        counter.stop_motor += 10;
+                    }
+                } else {
+                    counter.stop_motor = 0;
+                    }
+
+                if (counter.stop_motor > 250) {
+                    flag.stop = true;
+                }
             }
         }
     }
@@ -369,13 +388,16 @@ void element_count(void) {
 void element_process() {
     // 十字
     if (counter.drive_in_crossroad > 50) {
-        if(distances[5] > road_distances[5] && rstate == 0 && counter.drive_in_crossroad >= 50){
+        if(flag.found_crossroad) {
+            counter.drive_in_crossroad = 4000;
+        } else if (distances[5] > road_distances[5] && rstate == 0 && counter.drive_in_crossroad >= 50){
             rstate = 1;
             counter.drive_in_crossroad = 2000;
         } else if(distances[5] < road_distances[5] + 5 && rstate == 1){
             rstate = 0;
-            counter.drive_in_crossroad = 150;
-            beep.beep_ms(200);
+            counter.drive_in_crossroad = 0;
+            beep.beep_ms(500);
+            flag.drive_in_crossroad = !flag.drive_in_crossroad;
         }
     }
 
@@ -436,7 +458,7 @@ void element_process() {
 void element_check(void) {
     check_crossroad();
     // check_garage_and_obstacle();
-    check_ramp();
+    // check_ramp();
     // check_roundabout();
 }
 

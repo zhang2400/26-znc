@@ -10,6 +10,7 @@ Flag flag = {
         .right_sec_border = false,
         .left_border = false,
         .right_border = false,
+        .drive_in_crossroad = false,
         .drive_in_garage = false,
         .drive_out_garage = true,
         .change_speed_setpoint = true,

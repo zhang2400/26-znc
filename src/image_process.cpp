@@ -495,7 +495,7 @@ void get_lost_count() {
     right_lost_count = 0;
     left_lost_dir = 0;
     right_lost_dir = 0;
-    int target_distance = 7;
+    int target_distance = 5;
     int target_lost_y1 = 13;
 
     if (lost_x1 == 0 || lost_y1 == 0 || lost_x2 == 0 || lost_y2 == 0 || max_white_column.left_height < 39 || lost_y1 < target_lost_y1) {
@@ -864,8 +864,8 @@ int get_border_line(int detect_count_max) {
             break;
         }
 
-        if (left_x < 3) left_reach_edge++;
-        if (left_x > 3) flag.left_border = false;
+        if (left_x < 5) left_reach_edge++;
+        if (left_x > 8) flag.left_border = false;
         if (left_x > 40) flag.need_sec_border = true;
         left_border_index++;
         if (left_border_index != 0){
@@ -927,8 +927,8 @@ int get_border_line(int detect_count_max) {
         } else {
             break;
         }
-        if (right_x > 77) right_reach_edge++;
-        if (right_x < 77) flag.right_border = false;
+        if (right_x > 75) right_reach_edge++;
+        if (right_x < 72) flag.right_border = false;
         if (right_x < 40) flag.need_sec_border = true;
         right_border_index++;
         if (right_border_index != 0){
@@ -943,9 +943,9 @@ int get_border_line(int detect_count_max) {
     }
     detect_count_max = detect_count;
 
-    if (left_reach_edge >= 8) {
+    if (left_reach_edge >= 6) {
         flag.left_sec_border = true;
-    }else if (right_reach_edge >= 8) {
+    }else if (right_reach_edge >= 6) {
         flag.right_sec_border = true;
     }
 

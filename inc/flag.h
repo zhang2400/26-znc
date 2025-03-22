@@ -17,6 +17,7 @@ typedef struct{
     int8_t right_sec_border;
     int8_t left_border;
     int8_t right_border;
+    int8_t drive_in_crossroad;
     int8_t drive_in_garage; // 驶入车库标志
     int8_t drive_out_garage;  // 驶出车库标志
     int8_t change_speed_setpoint;  // 允许改变速度设定点标志
