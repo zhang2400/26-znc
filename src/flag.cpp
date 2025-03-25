@@ -20,6 +20,7 @@ Flag flag = {
         .found_crossroad = false,
         .found_left_roundabout = false,
         .found_right_roundabout = false,
+        .start = false,
         .stop = false,
         .icm20602_error = false,
         .lost_control = false

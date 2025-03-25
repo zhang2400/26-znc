@@ -74,5 +74,6 @@ extern int left_lost_count;
 extern int right_lost_count;
 extern int blind_line;
 extern int id;
+extern double distance;
 
 #endif //CV_MAIN_H

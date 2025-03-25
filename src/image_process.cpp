@@ -322,11 +322,11 @@ int check_roundabout(){
     int target_left_lost_count = 3;
     int target_right_lost_count = 3;
 
-    if (right_lost_count == 0 && id == 0) {
+    if (right_lost_count <= 3 && id == 0 && distance <= 75) {
         flag.found_left_roundabout= true;
     }
 
-    if (left_lost_count == 0 && id == 1){
+    if (left_lost_count <= 3 && id == 1 && distance <= 75) {
         flag.found_right_roundabout = true;
     }
     return flag.found_left_roundabout || flag.found_right_roundabout;
