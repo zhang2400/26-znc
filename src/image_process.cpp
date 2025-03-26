@@ -302,9 +302,9 @@ void max_white_column_get_pers(int16_t x1, int16_t y1, int16_t x2, int16_t y2){
 
 int check_crossroad(){
     flag.found_crossroad = false;
-    if(left_lost_count > 8 && right_lost_count > 8 && left_lost_count + right_lost_count > 25
-        && distances[25] > (road_distances[25] + 15) && distances[20] > (10 + road_distances[20])
-        && abs(left_lost_count - right_lost_count) < 10
+    if(left_lost_count > 3 && right_lost_count > 3 && left_lost_count + right_lost_count > 10
+        && distances[25] > (road_distances[25] + 10) && distances[20] > (8 + road_distances[20])
+        && abs(left_lost_count - right_lost_count) < 20
         && left_reach_edge > 40 && right_reach_edge > 40
         && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;
@@ -322,11 +322,11 @@ int check_roundabout(){
     int target_left_lost_count = 3;
     int target_right_lost_count = 3;
 
-    if (right_lost_count <= 3 && id == 0 && distance <= 75) {
+    if (right_lost_count <= 3 && id == 1 && distance <= 75) {
         flag.found_left_roundabout= true;
     }
 
-    if (left_lost_count <= 3 && id == 1 && distance <= 75) {
+    if (left_lost_count <= 3 && id == 0 && distance <= 75) {
         flag.found_right_roundabout = true;
     }
     return flag.found_left_roundabout || flag.found_right_roundabout;
