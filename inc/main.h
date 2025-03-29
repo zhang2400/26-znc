@@ -70,8 +70,14 @@ private:
     std::atomic<int> tail;
 };
 
+extern int lost_x1;
+extern int lost_x2;
+extern int lost_y1;
+extern int lost_y2;
 extern int left_lost_count;
 extern int right_lost_count;
+extern int left_lost_dir;
+extern int right_lost_dir;
 extern int blind_line;
 extern int id;
 extern double distance;

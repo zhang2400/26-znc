@@ -7,7 +7,7 @@ extern "C" {
 #include <stdbool.h>
 #include "stdint.h"
 #include "errno.h"
-#define GYROZ_CORRECT_DEFAULT 0.92
+#define GYROZ_CORRECT_DEFAULT 1.3
 #define ICM20948_I2C_ADDRESS          0x69
 #define ICM20948_I2C_ADDRESS_1        0x68
 #define ICM20948_WHO_AM_I_VAL         0xEA
