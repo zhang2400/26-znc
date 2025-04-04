@@ -31,6 +31,6 @@ cp "$BUILD_DIR/$build_name" .
 
 # 上传到开发板并运行
 echo "Uploading :scp $build_name $username@$ip:/home/$username"
-scp $build_name $username@$ip:/home/$username
+scp -O $build_name $username@$ip:/home/$username
 echo "Running :ssh $username@$ip ./$build_name"
 ssh -t $username@$ip "sudo ./$build_name"

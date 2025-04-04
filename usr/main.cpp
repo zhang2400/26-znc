@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 70;
+float speed_setpoint = 75;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
@@ -21,7 +21,7 @@ float turn_angle = 0;
 float turn_max = 15;
 
 float Kp_max = 0.022f;
-float Kd_max = 0.22f;
+float Kd_max = 0.2f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -71,7 +71,7 @@ int protect = 1;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 6000;
+int running_time = 10000;
 
 BEEP beep(GPIO61);
 Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
@@ -195,6 +195,9 @@ void* realtime_task(void* arg) {
             element_count();
             element_process();
 
+            // fix_crossroad();
+            // fix_left_break(0,60);
+            // fix_right_break(0,60);
             detect_count_max = get_border_line(80);
             outbounds_detection();
             // });
@@ -205,13 +208,16 @@ void* realtime_task(void* arg) {
             // 动态Kp，Kd
             if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
                 (flag.need_sec_border && flag.left_sec_border && flag.left_border)){
-                wheel_turn_pid.Kp = Kp_max * 1.2;
+                wheel_turn_pid.Kp = Kp_max;
                 wheel_turn_pid.Kd = Kd_max;
             }else if (counter.drive_in_left_roundabout || counter.drive_in_right_roundabout) {
                 wheel_turn_pid.Kp = Kp_max;
                 wheel_turn_pid.Kd = Kd_max;
+            }else if (counter.drive_in_crossroad > 50){
+                wheel_turn_pid.Kp = Kp_max * 0.4;
+                wheel_turn_pid.Kd = Kd_max * 0.4;
             }else{
-                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 5000)) + 0.3);
+                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 6500)) + 0.3);
                 wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 10000)) + 0.4);
             }
 
@@ -252,11 +258,12 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_left_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",dis_index,left_border[dis_index][0],right_border[dis_index][0],left_border[dis_index][1],right_border[dis_index][1]);
             // vofa_udp.printf("%d,%d\n",bottom_start_x,bottom_end_x);
-            vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%.2f,%d,%d\n",id,left_lost_count,right_lost_count,distance,flag.found_left_roundabout,flag.found_right_roundabout);
             // vofa_udp.printf("%f,%f,%d,%d\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
-
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right);
+            vofa_udp.printf("%d,%d\n",flag.found_garage, garage_count);
 
             // 速度环PID
             if(flag.stop){
@@ -286,13 +293,13 @@ void* realtime_task(void* arg) {
             }
 
             // 出界检测
-            if(blind_line <= 3 && abs(bottom_start_x - bottom_end_x) <= 30) {
+            if(blind_line <= 5 && abs(bottom_start_x - bottom_end_x) <= 20) {
                 counter.out_of_bound += 5;
             }else {
                 flag.stop = false;
                 counter.out_of_bound = 0;
             }
-            if(counter.out_of_bound > 20) {
+            if(counter.out_of_bound > 15) {
                 flag.stop = true;
             }
 
@@ -338,7 +345,7 @@ void element_count(void) {
         counter.found_left_roundabout = 0;
         counter.found_right_roundabout = 0;
         if(counter.found_crossroad > 2){
-            beep.beep_ms(200);
+            beep.beep_ms(400);
             counter.drive_in_crossroad = 4000;
         }
     }
@@ -349,6 +356,14 @@ void element_count(void) {
 
     if(counter.drive_in_crossroad > 0){
         counter.drive_in_crossroad -= 10;
+    }
+
+    if (flag.found_garage == true && counter.found_garage == 0 && counter.drive_in_ramp == 0) {
+        counter.found_garage += 2;
+        if (counter.found_garage > 5) {
+            beep.beep_ms(400);
+            counter.found_garage = 1000;
+        }
     }
 
     // 坡道
@@ -406,6 +421,8 @@ void element_count(void) {
 void element_process() {
     // 十字
     if (counter.drive_in_crossroad > 50) {
+        fix_crossroad();
+        // beep.beep_ms(100);
         if(flag.found_crossroad) {
             counter.drive_in_crossroad = 4000;
         } else if (distances[5] > road_distances[5] && rstate == 0 && counter.drive_in_crossroad >= 50){
@@ -413,11 +430,12 @@ void element_process() {
             counter.drive_in_crossroad = 2000;
         } else if(distances[5] < road_distances[5] + 5 && rstate == 1){
             rstate = 0;
-            counter.drive_in_crossroad = 0;
-            beep.beep_ms(500);
+            counter.drive_in_crossroad = 200;
             flag.drive_in_crossroad = !flag.drive_in_crossroad;
         }
     }
+
+    // 车库
 
     // 坡道
     if(counter.drive_in_ramp > 0){
@@ -489,23 +507,23 @@ void element_process() {
 
 void element_check(void) {
     check_crossroad();
-    // check_garage_and_obstacle();
+    check_garage();
     // check_ramp();
     check_roundabout();
 }
 
 void image_diff_process(void) {
-    if((counter.drive_in_crossroad > 0 && counter.drive_in_crossroad < 4001 && counter.drive_in_obstacle == 0)) {
-        // 十字处理
-        left_sum = 0;
-        right_sum = 0;
-        for(int i = 0; i < distance_middle_line_index; i++){
-            left_sum -= (distance_middle_line[i][0] - IMAGE_MIDDLE);
-        }
-        left_sum *= 17;
-        image_diff = right_sum - left_sum;
-    }
-    else if(counter.drive_in_ramp > 0 && counter.drive_in_ramp < 280){
+    // if((counter.drive_in_crossroad > 0 && counter.drive_in_obstacle == 0)) {
+    //     // 十字处理
+    //     left_sum = 0;
+    //     right_sum = 0;
+    //     for(int i = 0; i < distance_middle_line_index; i++){
+    //         left_sum -= (distance_middle_line[i][0] - IMAGE_MIDDLE);
+    //     }
+    //     left_sum *= 35;
+    //     image_diff = right_sum - left_sum;
+    // }
+    if(counter.drive_in_ramp > 0 && counter.drive_in_ramp < 280){
         right_sum = 0;
         left_sum = -(icm20948_data.anglez - ramp_angle) * 50;
         image_diff = right_sum - left_sum;
@@ -514,7 +532,7 @@ void image_diff_process(void) {
         right_sum = 0;
         int img_start = 12;
         if(img_start < incision)img_start = incision;
-        int img_end = img_start + 45;
+        int img_end = img_start + 50;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
             // left_sum -= (middle_line[i][0] - IMAGE_MIDDLE) * (1.5 + (i - (img_end - img_start) / 2) * 0.16);
@@ -593,7 +611,7 @@ int main()
     }
     LOGW("MAIN", "Application starting...");
 
-    system("v4l2-ctl -d /dev/video0 -c contrast=36 -c gamma=80 -c exposure_auto=1 -c exposure_absolute=90 -c sharpness=55");
+    system("v4l2-ctl -d /dev/video0 -c contrast=36 -c gamma=80 -c exposure_auto=1 -c exposure_absolute=100 -c sharpness=55");
 
     // 创建posix线程
     pthread_t rt_thread;

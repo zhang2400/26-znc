@@ -67,6 +67,9 @@ int left_reach_edge = 0;
 int right_reach_edge = 0;
 int t1,t2;
 
+int x_left;
+int x_right;
+
 uint8_t road_color = 0;  // 道路颜色
 uint8_t border_color = 255;  // 边界颜色
 
@@ -82,6 +85,11 @@ int left_lost_count;
 int right_lost_count;
 int left_lost_dir = 0;
 int right_lost_dir = 0;
+
+int lost_x1_last;
+int lost_x2_last;
+
+int garage_count = 0;
 
 extern int cornering;
 extern int image_diff;
@@ -303,9 +311,8 @@ void max_white_column_get_pers(int16_t x1, int16_t y1, int16_t x2, int16_t y2){
 int check_crossroad(){
     flag.found_crossroad = false;
     if(left_lost_count > 3 && right_lost_count > 3 && left_lost_count + right_lost_count > 10
-        && distances[25] > (road_distances[25] + 10) && distances[20] > (8 + road_distances[20])
-        && abs(left_lost_count - right_lost_count) < 20
-        && left_reach_edge > 40 && right_reach_edge > 40
+        && lost_x1 && lost_x2 && lost_y1 && lost_y2
+        && abs(lost_x1 - lost_x2) < 7
         && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;
         counter.drive_in_left_roundabout = 0;
@@ -314,6 +321,7 @@ int check_crossroad(){
     } else {
         return false;
     }
+    return flag.found_crossroad;
 }
 
 int check_roundabout(){
@@ -344,21 +352,15 @@ int check_ramp(){
     return flag.found_ramp;
 }
 
-int check_garage_and_obstacle(){
-    int count = 0;
+int check_garage() {
+    garage_count = 0;
     int flag_next = 0;
     int distance = 0;
     int start_y;
     int end_y;
     flag.found_garage = false;
-    flag.found_obstacle = false;
-    if(narrow_line[0][1] > 42 || narrow_line[0][1] == 0){
-        start_y = 43;
-        end_y = 28;
-    } else {
-        start_y = narrow_line[0][1];
-        end_y = narrow_line[narrow_line_index - 1][1];
-    }
+    start_y = 40;
+    end_y = 25;
     int _bottom_start_x = bottom_start_x;
     int _bottom_end_x = bottom_end_x;
     if(_bottom_end_x - _bottom_start_x < 35){
@@ -369,7 +371,7 @@ int check_garage_and_obstacle(){
         for (int j = _bottom_start_x; j < _bottom_end_x; j++) {
             if (gray_binary_image[i][j] == 0) {
                 if (flag_next == 0 && distance > 0 && distance < 5) {
-                    count++;
+                    garage_count++;
                     flag_next = 1;
                 }
                 distance = 0;
@@ -379,58 +381,10 @@ int check_garage_and_obstacle(){
             }
         }
     }
-    if(count > 25){
+    if(garage_count > 25){
         flag.found_garage = true;
     }
-    if(narrow_line_index > 5){
-        flag.found_obstacle = true;
-        float Ax;
-        float Ay;
-        float Bx;
-        float By;
-        float Cx;
-        float Cy;
-        uint8_t Aindex = 60 - narrow_line[0][1] - 4;
-        uint8_t Bindex = 60 - narrow_line[narrow_line_index/2][1] - 2;
-        uint8_t Cindex = 60 - narrow_line[narrow_line_index - 1][1] + 4;
-        Bx = left_distance_line_pers[Bindex][0];
-        By = left_distance_line_pers[Bindex][1];
-        Ax = left_distance_line_pers[Aindex][0];
-        Ay = left_distance_line_pers[Aindex][1];
-        Cx = left_distance_line_pers[Cindex][0];
-        Cy = left_distance_line_pers[Cindex][1];
-//        narrow_line[narrow_line_index][0] = Ax;
-//        narrow_line[narrow_line_index++][1] = Ay;
-//        narrow_line[narrow_line_index][0] = Bx;
-//        narrow_line[narrow_line_index++][1] = By;
-//        narrow_line[narrow_line_index][0] = Cx;
-//        narrow_line[narrow_line_index++][1] = Cy;
-        float left_dis = distance_to_line(Ax, Ay, Bx, By, Cx, Cy);
-        float left_ang = get_angle(Ax, Ay, Bx, By, Cx, Cy);
-        Bx = right_distance_line_pers[Bindex][0];
-        By = right_distance_line_pers[Bindex][1];
-        Ax = right_distance_line_pers[Aindex][0];
-        Ay = right_distance_line_pers[Aindex][1];
-        Cx = right_distance_line_pers[Cindex][0];
-        Cy = right_distance_line_pers[Cindex][1];
-//        narrow_line[narrow_line_index][0] = Ax;
-//        narrow_line[narrow_line_index++][1] = Ay;
-//        narrow_line[narrow_line_index][0] = Bx;
-//        narrow_line[narrow_line_index++][1] = By;
-//        narrow_line[narrow_line_index][0] = Cx;
-//        narrow_line[narrow_line_index++][1] = Cy;
-        float right_dis = distance_to_line(Ax, Ay, Bx, By, Cx, Cy);
-        float right_ang = get_angle(Ax, Ay, Bx, By, Cx, Cy);
-        if(left_dis > right_dis){
-            flag.advance_avoid_obstacle_dir = -1;
-        } else {
-            flag.advance_avoid_obstacle_dir = 1;
-        }
-    } else {
-        flag.advance_avoid_obstacle_dir = 0;
-    }
-    t1 = count;
-    return flag.found_garage || flag.found_obstacle;
+    return flag.found_garage;
 }
 
 // 抹除左上方道路
@@ -477,6 +431,50 @@ void fix_right_break(uint16_t y1, uint16_t y2){
     }
 }
 
+void fix_crossroad(){
+        float slope = (float)(lost_y1 - lost_y2) / (float)(lost_x1 - lost_x2);
+        float b = lost_y1 - slope * lost_x1;
+        x_left = 0;
+        x_right = 0;
+        if (lost_x2 > 50 || lost_x2 < 30) {
+            lost_x2 = lost_x2_last;
+        }
+        if (lost_y1 && lost_y2 && lost_x1 && lost_x2 && abs(lost_y1 - lost_y2) > 7) {
+            if (lost_x1 - lost_x2 != 0){
+                for (int i = lost_y1 + 10; i > lost_y2; i--) {
+                    int y = i;
+                    int x = (y - b) / slope;
+                    x_left = x - 0.5 * road_distances[60 - y];
+                    x_right = x + 0.5 * road_distances[60 - y];
+
+                    binary_image[i][x_left] = 255;
+                    binary_image[i][x_left - 1] = 255;
+                    binary_image[i][x_left - 2] = 255;
+
+                    binary_image[i][x_right] = 255;
+                    binary_image[i][x_right + 1] = 255;
+                    binary_image[i][x_right + 2] = 255;
+                }
+            }else {
+                for (int i = lost_y1 + 10; i > lost_y2; i--) {
+                    int y = i;
+                    int x = lost_x1;
+                    x_left = x - 0.5 * road_distances[60 - y];
+                    x_right = x + 0.5 * road_distances[60 - y];
+
+                    binary_image[i][x_left] = 255;
+                    binary_image[i][x_left - 1] = 255;
+                    binary_image[i][x_left - 2] = 255;
+
+                    binary_image[i][x_right] = 255;
+                    binary_image[i][x_right + 1] = 255;
+                    binary_image[i][x_right + 2] = 255;
+                }
+            }
+        }
+        lost_x2_last = lost_x2;
+}
+
 //2x2压缩图像
 void compress_image(uint8_t *Dst, const uint8_t *Src){
     uint16_t i;
@@ -496,7 +494,7 @@ void get_lost_count() {
     left_lost_dir = 0;
     right_lost_dir = 0;
     int target_distance = 7;
-    int target_lost_y1 = 25;
+    int target_lost_y1 = 30;
 
     if (lost_x1 == 0 || lost_y1 == 0 || lost_x2 == 0 || lost_y2 == 0 || max_white_column.left_height < 39 || lost_y1 < target_lost_y1) {
         return;

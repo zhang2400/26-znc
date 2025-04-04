@@ -56,6 +56,9 @@ extern int middle_line_index;
 extern int middle_line_index_pers;
 extern int left_reach_edge;
 extern int right_reach_edge;
+extern int x_left;
+extern int x_right;
+extern int garage_count;
 
 extern uint8_t left_border[100][2];  // ×ó±ß½ç
 extern uint8_t right_border[100][2];  // ÓÒ±ß½ç
@@ -124,7 +127,7 @@ int check_roundabout();
 
 int check_ramp();
 
-int check_garage_and_obstacle();
+int check_garage();
 
 void erase_top_left_road(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 
@@ -133,6 +136,8 @@ void erase_top_right_road(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 void fix_left_break(uint16_t y1, uint16_t y2);
 
 void fix_right_break(uint16_t y1, uint16_t y2);
+
+void fix_crossroad();
 
 void compress_image(uint8_t *Dst, const uint8_t *Src);
 
