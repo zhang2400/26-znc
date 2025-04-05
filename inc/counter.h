@@ -19,6 +19,7 @@ typedef struct{
     int16_t drive_in_right_roundabout;  // 正在驶入右环岛倒计时(ms)
     int16_t drive_in_crossroad;  // 正在驶入十字路口倒计时(ms)
     int16_t drive_in_ramp;  // 正在驶入坡道倒计时(ms)
+    int16_t drive_in_garage;
     int16_t drive_in_obstacle;  // 正在驶入障碍物倒计时(ms)
     int16_t avoid_roundabout;  // 不进行环岛检测倒计时(ms)
     int16_t avoid_obstacle;  // 不进行障碍物检测倒计时(ms)

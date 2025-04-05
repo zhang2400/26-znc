@@ -86,8 +86,12 @@ int right_lost_count;
 int left_lost_dir = 0;
 int right_lost_dir = 0;
 
-int lost_x1_last;
-int lost_x2_last;
+
+int fix_x1 = 0;
+int fix_x2 = 0;
+int fix_y1 = 0;
+int fix_y2 = 0;
+int fix_x2_last = 0;
 
 int garage_count = 0;
 
@@ -310,9 +314,9 @@ void max_white_column_get_pers(int16_t x1, int16_t y1, int16_t x2, int16_t y2){
 
 int check_crossroad(){
     flag.found_crossroad = false;
-    if(left_lost_count > 3 && right_lost_count > 3 && left_lost_count + right_lost_count > 10
-        && lost_x1 && lost_x2 && lost_y1 && lost_y2
-        && abs(lost_x1 - lost_x2) < 7
+    if(lost_x1 && lost_x2 && lost_y1 && lost_y2
+        && abs(lost_x1 - lost_x2) < 10
+        && left_reach_edge > 30 && right_reach_edge > 30
         && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;
         counter.drive_in_left_roundabout = 0;
@@ -432,47 +436,52 @@ void fix_right_break(uint16_t y1, uint16_t y2){
 }
 
 void fix_crossroad(){
-        float slope = (float)(lost_y1 - lost_y2) / (float)(lost_x1 - lost_x2);
-        float b = lost_y1 - slope * lost_x1;
-        x_left = 0;
-        x_right = 0;
-        if (lost_x2 > 50 || lost_x2 < 30) {
-            lost_x2 = lost_x2_last;
-        }
-        if (lost_y1 && lost_y2 && lost_x1 && lost_x2 && abs(lost_y1 - lost_y2) > 7) {
-            if (lost_x1 - lost_x2 != 0){
-                for (int i = lost_y1 + 10; i > lost_y2; i--) {
-                    int y = i;
-                    int x = (y - b) / slope;
-                    x_left = x - 0.5 * road_distances[60 - y];
-                    x_right = x + 0.5 * road_distances[60 - y];
+    fix_x1 = middle_line[60-lost_y1-8][0];
+    fix_y1 = middle_line[60-lost_y1-8][1];
+    fix_x2 = lost_x2;
+    fix_y2 = lost_y2;
 
-                    binary_image[i][x_left] = 255;
-                    binary_image[i][x_left - 1] = 255;
-                    binary_image[i][x_left - 2] = 255;
+    if (fix_x2 > 60 || fix_x2 < 20) {
+        fix_x2 = fix_x2_last;
+    }
+    float slope = (float)(fix_y1 - fix_y2) / (float)(fix_x1 - fix_x2);
+    float b = fix_y1 - slope * fix_x1;
+    x_left = 0;
+    x_right = 0;
+    if (fix_y1 && fix_y2 && fix_x1 && fix_x2 && abs(fix_y1 - fix_y2) > 5) {
+        if (fix_x1 - fix_x2 != 0){
+            for (int i = fix_y1; i > fix_y2; i--) {
+                int y = i;
+                int x = (y - b) / slope;
+                x_left = x - 0.5 * road_distances[60 - y];
+                x_right = x + 0.5 * road_distances[60 - y];
 
-                    binary_image[i][x_right] = 255;
-                    binary_image[i][x_right + 1] = 255;
-                    binary_image[i][x_right + 2] = 255;
-                }
-            }else {
-                for (int i = lost_y1 + 10; i > lost_y2; i--) {
-                    int y = i;
-                    int x = lost_x1;
-                    x_left = x - 0.5 * road_distances[60 - y];
-                    x_right = x + 0.5 * road_distances[60 - y];
+                binary_image[i][x_left] = 255;
+                binary_image[i][x_left - 1] = 255;
+                binary_image[i][x_left - 2] = 255;
 
-                    binary_image[i][x_left] = 255;
-                    binary_image[i][x_left - 1] = 255;
-                    binary_image[i][x_left - 2] = 255;
+                binary_image[i][x_right] = 255;
+                binary_image[i][x_right + 1] = 255;
+                binary_image[i][x_right + 2] = 255;
+            }
+        }else {
+            for (int i = fix_y1; i > fix_y2; i--) {
+                int y = i;
+                int x = fix_x1;
+                x_left = x - 0.5 * road_distances[60 - y];
+                x_right = x + 0.5 * road_distances[60 - y];
 
-                    binary_image[i][x_right] = 255;
-                    binary_image[i][x_right + 1] = 255;
-                    binary_image[i][x_right + 2] = 255;
-                }
+                binary_image[i][x_left] = 255;
+                binary_image[i][x_left - 1] = 255;
+                binary_image[i][x_left - 2] = 255;
+
+                binary_image[i][x_right] = 255;
+                binary_image[i][x_right + 1] = 255;
+                binary_image[i][x_right + 2] = 255;
             }
         }
-        lost_x2_last = lost_x2;
+    }
+    fix_x2_last = fix_x2;
 }
 
 //2x2Ñ¹ËõÍ¼Ïñ
@@ -863,8 +872,8 @@ int get_border_line(int detect_count_max) {
         }
 
         if (left_x < 4) left_reach_edge++;
-        if (left_x > 8) flag.left_border = false;
-        if (left_x > 55) flag.need_sec_border = true;
+        if (left_x > 14) flag.left_border = false;
+        if (left_x > 60) flag.need_sec_border = true;
         left_border_index++;
         if (left_border_index != 0){
             left_border[left_border_index][0] = left_x;
@@ -926,8 +935,8 @@ int get_border_line(int detect_count_max) {
             break;
         }
         if (right_x > 76) right_reach_edge++;
-        if (right_x < 72) flag.right_border = false;
-        if (right_x < 25) flag.need_sec_border = true;
+        if (right_x < 68) flag.right_border = false;
+        if (right_x < 20) flag.need_sec_border = true;
         right_border_index++;
         if (right_border_index != 0){
             right_border[right_border_index][0] = right_x;
@@ -941,23 +950,24 @@ int get_border_line(int detect_count_max) {
     }
     detect_count_max = detect_count;
 
-    if (left_reach_edge >= 4) {
+    if (left_reach_edge >= 10) {
         flag.left_sec_border = true;
     }
-    if (right_reach_edge >= 4) {
+
+    if (right_reach_edge >= 10) {
         flag.right_sec_border = true;
     }
 
     if (flag.need_sec_border && flag.left_sec_border && flag.left_border) {
         for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
-            left_border[detect_count][0] = 3;
+            left_border[detect_count][0] = 1;
             left_border[detect_count][1] = 58;
         }
     }
 
     if (flag.need_sec_border && flag.right_sec_border && flag.right_border) {
         for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
-            right_border[detect_count][0] = 78;
+            right_border[detect_count][0] = 79;
             right_border[detect_count][1] = 58;
         }
     }
@@ -1358,6 +1368,24 @@ void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][
     int i = 2;
 
     while (i < max_points && (line[i][0] != 0 || line[i][1] != 0)) {
+        const int px = x + line[i][0];
+        const int py = y + line[i][1];
+
+        if (px >= 0 && px < image.cols && py >= 0 && py < image.rows) {
+            image.at<cv::Vec3b>(py, px) = cv::Vec3b(
+                color[0],  // Blue
+                color[1],  // Green
+                color[2]   // Red
+            );
+        }
+        i++;
+    }
+}
+
+void tft180_draw_real_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
+    int i = incision;
+
+    while (i < detect_count_max && (line[i][0] != 0 || line[i][1] != 0)) {
         const int px = x + line[i][0];
         const int py = y + line[i][1];
 

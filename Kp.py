@@ -4,13 +4,13 @@ import numpy as np
 
 e = 2.7182818284590452353602874713527
 
-left_range = -15000
-right_range = 15000
+left_range = -20000
+right_range = 20000
 
 x1 = np.linspace(left_range, right_range, 1000)
 x2 = np.linspace(left_range, right_range, 1000)
 
-kp = 0.7 * (np.tanh(abs(x2) / 5000)) + 0.3
+kp = 0.7 * (np.tanh(abs(x2) / 8000)) + 0.3
 kd = 0.6 * (np.tanh(abs(x1) / 10000)) + 0.4
 
 plt.figure(figsize=(8, 6))  # 设置图像大小

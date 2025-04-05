@@ -80,6 +80,9 @@ extern int left_lost_dir;
 extern int right_lost_dir;
 extern int blind_line;
 extern int id;
+extern int incision;
+extern int incision_max;
+extern int detect_count_max;
 extern double distance;
 
 #endif //CV_MAIN_H

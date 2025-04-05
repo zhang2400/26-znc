@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 75;
+float speed_setpoint = 70;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
@@ -20,8 +20,8 @@ float turn_pidout = 0;
 float turn_angle = 0;
 float turn_max = 15;
 
-float Kp_max = 0.022f;
-float Kd_max = 0.2f;
+float Kp_max = 0.024f;
+float Kd_max = 0.21f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -67,11 +67,12 @@ int incision_max = 12;
 int detect_count_max = 0;
 
 int blind_line;
-int protect = 1;
+int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
 int running_time = 10000;
+int stop_in_garage = false;
 
 BEEP beep(GPIO61);
 Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
@@ -195,9 +196,6 @@ void* realtime_task(void* arg) {
             element_count();
             element_process();
 
-            // fix_crossroad();
-            // fix_left_break(0,60);
-            // fix_right_break(0,60);
             detect_count_max = get_border_line(80);
             outbounds_detection();
             // });
@@ -206,18 +204,19 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
 
             // 动态Kp，Kd
-            if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
-                (flag.need_sec_border && flag.left_sec_border && flag.left_border)){
-                wheel_turn_pid.Kp = Kp_max;
-                wheel_turn_pid.Kd = Kd_max;
-            }else if (counter.drive_in_left_roundabout || counter.drive_in_right_roundabout) {
-                wheel_turn_pid.Kp = Kp_max;
-                wheel_turn_pid.Kd = Kd_max;
-            }else if (counter.drive_in_crossroad > 50){
+            // if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
+            //     (flag.need_sec_border && flag.left_sec_border && flag.left_border)){
+            //     // wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 6000)) + 0.3);
+            //     // wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 10000)) + 0.4);
+            // }
+            if (counter.drive_in_left_roundabout || counter.drive_in_right_roundabout) {
+                wheel_turn_pid.Kp = Kp_max * 0.8;
+                wheel_turn_pid.Kd = Kd_max * 0.8;
+            }else if (counter.drive_in_crossroad > 800){
                 wheel_turn_pid.Kp = Kp_max * 0.4;
                 wheel_turn_pid.Kd = Kd_max * 0.4;
             }else{
-                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 6500)) + 0.3);
+                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 8000)) + 0.3);
                 wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 10000)) + 0.4);
             }
 
@@ -263,7 +262,10 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%f,%f,%d,%d\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right);
-            vofa_udp.printf("%d,%d\n",flag.found_garage, garage_count);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
+            // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,counter.found_garage, garage_count,detect_count_max);
+            vofa_udp.printf("%d,%d,%d,%.2f\n",image_diff,left_reach_edge,right_reach_edge,turn_angle);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
 
             // 速度环PID
             if(flag.stop){
@@ -303,12 +305,12 @@ void* realtime_task(void* arg) {
                 flag.stop = true;
             }
 
-            if (Moto_L.speed > 0 || Moto_R.speed > 0) {
+            if (Moto_L.speed > 10 || Moto_R.speed > 10) {
                 flag.start = true;
             }
 
             // 电机堵转或编码器异常时停止电机
-            if(protect == 1) {
+            if(protect == true) {
                 if ((abs(Moto_L.speed) < 10 && abs(left_speed_setpoint) > 40) ||
                     (abs(Moto_R.speed) < 10 && abs(right_speed_setpoint) > 40)) {
                         counter.stop_motor += 10;
@@ -345,7 +347,7 @@ void element_count(void) {
         counter.found_left_roundabout = 0;
         counter.found_right_roundabout = 0;
         if(counter.found_crossroad > 2){
-            beep.beep_ms(400);
+            beep.beep_ms(500);
             counter.drive_in_crossroad = 4000;
         }
     }
@@ -358,12 +360,21 @@ void element_count(void) {
         counter.drive_in_crossroad -= 10;
     }
 
-    if (flag.found_garage == true && counter.found_garage == 0 && counter.drive_in_ramp == 0) {
+    // 车库
+    if (flag.found_garage == true && counter.drive_in_ramp == 0 && counter.drive_in_crossroad == 0) {
         counter.found_garage += 2;
-        if (counter.found_garage > 5) {
+        if (counter.found_garage > 3) {
             beep.beep_ms(400);
-            counter.found_garage = 1000;
+            counter.drive_in_garage = 1000;
         }
+    }
+
+    if (counter.found_garage > 0) {
+        counter.found_garage--;
+    }
+
+    if (counter.drive_in_garage > 0) {
+        counter.drive_in_garage -= 10;
     }
 
     // 坡道
@@ -421,13 +432,14 @@ void element_count(void) {
 void element_process() {
     // 十字
     if (counter.drive_in_crossroad > 50) {
-        fix_crossroad();
-        // beep.beep_ms(100);
+        if (counter.drive_in_crossroad > 50) {
+            fix_crossroad();
+        }
         if(flag.found_crossroad) {
             counter.drive_in_crossroad = 4000;
         } else if (distances[5] > road_distances[5] && rstate == 0 && counter.drive_in_crossroad >= 50){
             rstate = 1;
-            counter.drive_in_crossroad = 2000;
+            counter.drive_in_crossroad = 800;
         } else if(distances[5] < road_distances[5] + 5 && rstate == 1){
             rstate = 0;
             counter.drive_in_crossroad = 200;
@@ -436,6 +448,9 @@ void element_process() {
     }
 
     // 车库
+    if (counter.drive_in_garage > 0 && stop_in_garage == true) {
+        flag.stop = true;
+    }
 
     // 坡道
     if(counter.drive_in_ramp > 0){
@@ -513,17 +528,17 @@ void element_check(void) {
 }
 
 void image_diff_process(void) {
-    // if((counter.drive_in_crossroad > 0 && counter.drive_in_obstacle == 0)) {
-    //     // 十字处理
-    //     left_sum = 0;
-    //     right_sum = 0;
-    //     for(int i = 0; i < distance_middle_line_index; i++){
-    //         left_sum -= (distance_middle_line[i][0] - IMAGE_MIDDLE);
-    //     }
-    //     left_sum *= 35;
-    //     image_diff = right_sum - left_sum;
-    // }
-    if(counter.drive_in_ramp > 0 && counter.drive_in_ramp < 280){
+    if((counter.drive_in_crossroad > 400 && counter.drive_in_obstacle == 0)) {
+        // 十字处理
+        left_sum = 0;
+        right_sum = 0;
+        for(int i = 0; i < distance_middle_line_index; i++){
+            left_sum -= (distance_middle_line[i][0] - IMAGE_MIDDLE);
+        }
+        left_sum *= 35;
+        image_diff = right_sum - left_sum;
+    }
+    else if(counter.drive_in_ramp > 0 && counter.drive_in_ramp < 280){
         right_sum = 0;
         left_sum = -(icm20948_data.anglez - ramp_angle) * 50;
         image_diff = right_sum - left_sum;
@@ -542,6 +557,15 @@ void image_diff_process(void) {
         // left_sum += 4000 * cornering;
         image_diff = right_sum - left_sum;
     }
+
+    if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
+    (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
+        if (image_diff < 0) {
+            image_diff -= left_reach_edge * 120;
+        }else {
+            image_diff += right_reach_edge * 120;
+        }
+    }
 }
 
 // 非实时任务线程函数
@@ -556,7 +580,7 @@ void *non_realtime_task(void *arg) {
             // fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
-                memcpy(gray1ch_image,gray_image , 80 * 60);
+                memcpy(gray1ch_image,gray_image, 80 * 60);
                 // memcpy(gray1ch_image, binary_image, 80 * 60);
                 cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
@@ -576,10 +600,10 @@ void *non_realtime_task(void *arg) {
                 distance = atag.getClosetTagDistance(1500);
                 // cv::putText(gray3ch, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
             // });
-                tft180_draw_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
-                tft180_draw_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
-                tft180_draw_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
-                tft180_draw_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0, 0, 0));
+                tft180_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
+                tft180_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
+                tft180_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
+                tft180_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0, 0, 0));
             // MEASURE_TIME("http write", {
                 vofa_tcp.imwrite(gray3ch);
                 // cv::Mat cv_image(60, 60, CV_8UC1, gray_pers_image); // 60行60列的灰度图
@@ -611,7 +635,7 @@ int main()
     }
     LOGW("MAIN", "Application starting...");
 
-    system("v4l2-ctl -d /dev/video0 -c contrast=36 -c gamma=80 -c exposure_auto=1 -c exposure_absolute=100 -c sharpness=55");
+    system("v4l2-ctl -d /dev/video0 -c contrast=36 -c gamma=80 -c exposure_auto=1 -c exposure_absolute=90 -c sharpness=55");
 
     // 创建posix线程
     pthread_t rt_thread;

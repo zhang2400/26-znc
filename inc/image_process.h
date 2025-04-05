@@ -157,6 +157,8 @@ void calculate_contrast_x8(uint8_t *dst_image, const uint8_t *src_image, int16_t
 
 void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color);
 
+void tft180_draw_real_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color);
+
 float distance_to_line(float Ax, float Ay, float Bx, float By, float Cx, float Cy);
 
 float get_angle(float Ax, float Ay, float Bx, float By, float Cx, float Cy);
