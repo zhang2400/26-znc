@@ -872,7 +872,7 @@ int get_border_line(int detect_count_max) {
         }
 
         if (left_x < 4) left_reach_edge++;
-        if (left_x > 14) flag.left_border = false;
+        if (left_x > 10) flag.left_border = false;
         if (left_x > 60) flag.need_sec_border = true;
         left_border_index++;
         if (left_border_index != 0){
@@ -935,7 +935,7 @@ int get_border_line(int detect_count_max) {
             break;
         }
         if (right_x > 76) right_reach_edge++;
-        if (right_x < 68) flag.right_border = false;
+        if (right_x < 70) flag.right_border = false;
         if (right_x < 20) flag.need_sec_border = true;
         right_border_index++;
         if (right_border_index != 0){

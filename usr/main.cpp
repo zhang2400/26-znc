@@ -18,10 +18,10 @@ float right_speed_setpoint = 0;
 
 float turn_pidout = 0;
 float turn_angle = 0;
-float turn_max = 15;
+float turn_max = 14;
 
-float Kp_max = 0.024f;
-float Kd_max = 0.21f;
+float Kp_max = 0.022f;
+float Kd_max = 0.20f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -71,8 +71,8 @@ int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 10000;
-int stop_in_garage = false;
+int running_time = 2000;
+int stop_in_garage = true;
 
 BEEP beep(GPIO61);
 Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
@@ -128,7 +128,7 @@ void* realtime_task(void* arg) {
     cap.open(0);
     result_image = cv::Mat(60, 80, CV_8UC1);
 
-    beep.beep_ms(200);
+    beep.beep_ms(400);
 
     if(ret1 != 0) goto OUT;
     if(ret2 != 0) goto OUT;
@@ -161,11 +161,10 @@ void* realtime_task(void* arg) {
             cap >> frame;
             // vofa_tcp.imwrite(frame);
             frame.copyTo(myframe);
-            // memcpy(LQU_CAM_image, myframe.data, 320 * 240);
+            memcpy(LQU_CAM_image, myframe.data, 320 * 240);
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
-            // cover_car_head();
-            // ImagePerspective();
+            ImagePerspective();
 
             calculate_contrast_x8((uint8_t *)contrast_image, (const uint8_t *)gray_image, 80, 60);
             memcpy((uint8_t *) binary_image, (const uint8_t *) contrast_image, 80 * 60);
@@ -259,13 +258,14 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d\n",bottom_start_x,bottom_end_x);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%.2f,%d,%d\n",id,left_lost_count,right_lost_count,distance,flag.found_left_roundabout,flag.found_right_roundabout);
-            // vofa_udp.printf("%f,%f,%d,%d\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed);
+            // vofa_udp.printf("%f,%f,%d,%d,%.2f,%.2f\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
             // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,counter.found_garage, garage_count,detect_count_max);
-            vofa_udp.printf("%d,%d,%d,%.2f\n",image_diff,left_reach_edge,right_reach_edge,turn_angle);
+            // vofa_udp.printf("%d,%d,%d,%.2f\n",image_diff,left_reach_edge,right_reach_edge,turn_angle);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
+            vofa_udp.printf("%d\n",flag.stop);
 
             // 速度环PID
             if(flag.stop){
@@ -561,9 +561,15 @@ void image_diff_process(void) {
     if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
     (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
         if (image_diff < 0) {
-            image_diff -= left_reach_edge * 120;
+            image_diff -= left_reach_edge * 60;
         }else {
-            image_diff += right_reach_edge * 120;
+            image_diff += right_reach_edge * 60;
+        }
+    }else if (left_reach_edge > 25 || right_reach_edge > 25) {
+        if (image_diff < 0) {
+            image_diff -= left_reach_edge * 20;
+        }else {
+            image_diff += right_reach_edge * 20;
         }
     }
 }
@@ -574,6 +580,7 @@ void *non_realtime_task(void *arg) {
     cv::Mat gray;
     cv::Mat gray1ch(60, 80, CV_8UC1, (void*)gray1ch_image);
     cv::Mat gray3ch;
+    cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行60列的灰度图
     std::vector<uchar> jpg;
     int iii=0;
     while (running) {
@@ -605,9 +612,9 @@ void *non_realtime_task(void *arg) {
                 tft180_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
                 tft180_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0, 0, 0));
             // MEASURE_TIME("http write", {
-                vofa_tcp.imwrite(gray3ch);
-                // cv::Mat cv_image(60, 60, CV_8UC1, gray_pers_image); // 60行60列的灰度图
-                // vofa_tcp.imwrite(cv_image);
+                // vofa_tcp.imwrite(gray3ch);
+
+                vofa_tcp.imwrite(cv_image);
                 // http << gray3ch;
             });
     }
