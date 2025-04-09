@@ -117,7 +117,7 @@ void* realtime_task(void* arg) {
     std::chrono::steady_clock::time_point end;
 
     int otsu_threshold = 0;
-    int contrast_threshold = 20;
+    int otsu_threshold_pers = 0;
     int canny_lowThreshold = 17;
     int canny_highThreshold = 35;
 
@@ -166,19 +166,26 @@ void* realtime_task(void* arg) {
             memcpy(gray_image, myframe.data, 80 * 60);
             ImagePerspective();
 
-            calculate_contrast_x8((uint8_t *)contrast_image, (const uint8_t *)gray_image, 80, 60);
+            calculate_contrast_x8(reinterpret_cast<uint8_t *>(contrast_image), reinterpret_cast<const uint8_t *>(gray_image), 80, 60);
             memcpy((uint8_t *) binary_image, (const uint8_t *) contrast_image, 80 * 60);
             // MEASURE_TIME("rt task", {
-            my_cv2_doubleThreshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, canny_lowThreshold, canny_highThreshold);
-            my_cv2_checkConnectivity((uint8_t *) binary_image, 80, 0, 0, 80, 60);
-            my_cv2_threshold((uint8_t *) binary_image, 80, 0, 0, 80, 60, 127, 255);
+            my_cv2_doubleThreshold(reinterpret_cast<uint8_t *>(binary_image), 80, 0, 0, 80, 60, canny_lowThreshold, canny_highThreshold);
+            my_cv2_checkConnectivity(reinterpret_cast<uint8_t *>(binary_image), 80, 0, 0, 80, 60);
+            my_cv2_threshold(reinterpret_cast<uint8_t *>(binary_image), 80, 0, 0, 80, 60, 127, 255);
             // });
             memcpy((uint8_t *) binary_image_bak, (const uint8_t *) binary_image, 80 * 60);
             memcpy((uint8_t *) gray_binary_image, (const uint8_t *) gray_image, 80 * 60);
-            otsu_threshold = get_otsu_threshold(0, 40, 60, 80, (const uint8 *) gray_image);
-            my_cv2_threshold((uint8 *) gray_binary_image, 80, 0, 0, 80, 60, otsu_threshold, 255);
+            otsu_threshold = get_otsu_threshold(0, 40, 60, 80, reinterpret_cast<const uint8 *>(gray_image));
+            my_cv2_threshold(reinterpret_cast<uint8 *>(gray_binary_image), 80, 0, 0, 80, 60, otsu_threshold, 255);
 
-            // vofa_tcp.imwrite((uint8_t *)gray_binary_image, 80, 60);
+            calculate_contrast_x8(reinterpret_cast<uint8_t *>(contrast_pers_image), reinterpret_cast<const uint8_t *>(gray_pers_image), 40, 60);
+            memcpy((uint8 *) binary_pers_image, (const uint8 *) contrast_pers_image, 40 * 60);  // 复制对比度图像到待二值化图像
+            my_cv2_doubleThreshold(reinterpret_cast<uint8 *>(binary_pers_image), 40, 0, 0, 40, 60, canny_lowThreshold, canny_highThreshold);
+            my_cv2_checkConnectivity(reinterpret_cast<uint8 *>(binary_pers_image), 40, 0, 0, 40, 60);  // 检查连通性
+            my_cv2_threshold(reinterpret_cast<uint8 *>(binary_pers_image), 40, 0, 0, 40, 60, 127, 255);
+            memcpy(gray_binary_pers_image, (const uint8 *) gray_pers_image, 40 * 60);
+            otsu_threshold_pers = get_otsu_threshold(0, 20, 40, 60, reinterpret_cast<const uint8 *>(gray_pers_image));
+            my_cv2_threshold(reinterpret_cast<uint8 *>(gray_binary_pers_image), 40, 0, 0, 40, 60, otsu_threshold_pers, 255);
 
             bottom_start_end_x_get();
             // get_max_middle_line_height();
@@ -190,6 +197,11 @@ void* realtime_task(void* arg) {
             get_lost_count();
             get_narrow_line();
             draw_rectan();
+
+            bottom_start_end_x_get_pers();
+            max_white_column_get_pers(bottom_start_x_pers > 10 ? bottom_start_x_pers : 10, 1, bottom_end_x_pers < 30 ? bottom_end_x_pers : 30 , 50);
+            get_distance_line_pers();
+            get_narrow_line();
 
             element_check();
             element_count();
@@ -265,7 +277,8 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,counter.found_garage, garage_count,detect_count_max);
             // vofa_udp.printf("%d,%d,%d,%.2f\n",image_diff,left_reach_edge,right_reach_edge,turn_angle);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
-            vofa_udp.printf("%d\n",flag.stop);
+            // vofa_udp.printf("%d\n",flag.stop);
+            vofa_udp.printf("%d,%d,%d,%d\n",bottom_start_x_pers, bottom_end_x_pers,max_white_column_pers.left_x,max_white_column_pers.right_x);
 
             // 速度环PID
             if(flag.stop){
@@ -340,7 +353,7 @@ OUT:
     return nullptr;
 }
 
-void element_count(void) {
+void element_count() {
     // 十字
     if(flag.found_crossroad == true && counter.drive_in_crossroad == 0 && counter.drive_in_ramp == 0) {
         counter.found_crossroad += 2;
@@ -520,14 +533,14 @@ void element_process() {
 }
 
 
-void element_check(void) {
+void element_check() {
     check_crossroad();
     check_garage();
     // check_ramp();
     check_roundabout();
 }
 
-void image_diff_process(void) {
+void image_diff_process() {
     if((counter.drive_in_crossroad > 400 && counter.drive_in_obstacle == 0)) {
         // 十字处理
         left_sum = 0;
@@ -580,7 +593,7 @@ void *non_realtime_task(void *arg) {
     cv::Mat gray;
     cv::Mat gray1ch(60, 80, CV_8UC1, (void*)gray1ch_image);
     cv::Mat gray3ch;
-    cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行60列的灰度图
+    cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
     std::vector<uchar> jpg;
     int iii=0;
     while (running) {
@@ -612,9 +625,9 @@ void *non_realtime_task(void *arg) {
                 tft180_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
                 tft180_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0, 0, 0));
             // MEASURE_TIME("http write", {
-                // vofa_tcp.imwrite(gray3ch);
+                vofa_tcp.imwrite(gray3ch);
 
-                vofa_tcp.imwrite(cv_image);
+                // vofa_tcp.imwrite(cv_image);
                 // http << gray3ch;
             });
     }

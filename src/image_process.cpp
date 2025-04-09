@@ -133,7 +133,7 @@ void bottom_start_end_x_get_pers(){
     int maxLength = 0;
     int currentLength = 0;
     for (int i = 0; i < 40; i++) {
-        if (gray_binary_pers_image[38][i] == 255) {
+        if (gray_binary_pers_image[50][i] == 255) {
             if (currentStartIndex == -1) {
                 currentStartIndex = i;
             }
