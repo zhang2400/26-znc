@@ -1,11 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
 project(loongson_camera)
 
+set(USE_OPENCV_MOBILE OFF)
+
+if(USE_OPENCV_MOBILE)
+    set(CUSTOM_OPENCV_DIR "opencv-mobile")
+else()
+    set(CUSTOM_OPENCV_DIR "opencv")
+endif()
+
 execute_process(
         COMMAND uname -m
         OUTPUT_VARIABLE ARCHITECTURE
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
 set(EXECUTABLE_NAME cv)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -13,13 +22,13 @@ add_definitions(-DHTTP_STREAM)
 add_definitions(-DOVERWRITE_LOG)
 add_definitions(-DLOG_LEVEL=3)
 if (ARCHITECTURE STREQUAL "loongarch64" OR USE_LOONGARCH)
-    set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/loongarch64/opencv-mobile/lib/cmake/opencv4)
-    set(OpenCV_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/loongarch64/opencv-mobile/include/opencv4)
+    set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/loongarch64/${CUSTOM_OPENCV_DIR}/lib/cmake/opencv4)
+    set(OpenCV_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/loongarch64/${CUSTOM_OPENCV_DIR}/include/opencv4)
     set(apriltag_DIR ${CMAKE_SOURCE_DIR}/lib/loongarch64/apriltag/lib/apriltag/cmake)
     set(apriltag_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/loongarch64/apriltag/include)
 elseif (ARCHITECTURE STREQUAL "x86_64")
-    set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/x86_64/opencv-mobile/lib/cmake/opencv4)
-    set(OpenCV_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/x86_64/opencv-mobile/include/opencv4)
+    set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/x86_64/${CUSTOM_OPENCV_DIR}/lib/cmake/opencv4)
+    set(OpenCV_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/x86_64/${CUSTOM_OPENCV_DIR}/include/opencv4)
     set(apriltag_DIR ${CMAKE_SOURCE_DIR}/lib/x86_64/apriltag/lib/apriltag/cmake)
     set(apriltag_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/x86_64/apriltag/include)
 endif()
