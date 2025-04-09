@@ -52,6 +52,7 @@ extern int bottom_start_x_pers;
 extern int bottom_end_x_pers;
 extern int distance_index;
 extern int distance_middle_line_index;
+extern int narrow_line_index;
 extern int middle_line_index;
 extern int middle_line_index_pers;
 extern int left_reach_edge;
@@ -126,6 +127,8 @@ int check_crossroad();
 int check_roundabout();
 
 int check_ramp();
+
+int check_obstacle();
 
 int check_garage();
 

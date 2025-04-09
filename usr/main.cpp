@@ -1,5 +1,10 @@
 #include "main.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+#include <linux/videodev2.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
 float CAR_ANGLE_CONVERT = 3.1f;
 
 // PID相关变量
@@ -121,6 +126,8 @@ void* realtime_task(void* arg) {
     int canny_lowThreshold = 17;
     int canny_highThreshold = 35;
 
+
+    // 使用OpenCV捕获并解码 MJPEG 数据
     cv::VideoCapture cap;
     cap.set(cv::CAP_PROP_FRAME_WIDTH, 320);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
@@ -152,13 +159,16 @@ void* realtime_task(void* arg) {
                 LOGW("timer_event", "定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
 
-            // MEASURE_TIME("realtime_task_cost", {
+            MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
             printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
+            // MEASURE_TIME("realtime_task_cost", {
             // 图像处理
             cap >> frame;
+                // printf("frame size: %d %d\n", frame.cols, frame.rows);
+            // });
             // vofa_tcp.imwrite(frame);
             frame.copyTo(myframe);
             memcpy(LQU_CAM_image, myframe.data, 320 * 240);
@@ -199,7 +209,7 @@ void* realtime_task(void* arg) {
             draw_rectan();
 
             bottom_start_end_x_get_pers();
-            max_white_column_get_pers(bottom_start_x_pers > 10 ? bottom_start_x_pers : 10, 1, bottom_end_x_pers < 30 ? bottom_end_x_pers : 30 , 50);
+            max_white_column_get_pers(bottom_start_x_pers > 10 ? bottom_start_x_pers : 10, 1, bottom_end_x_pers < 30 ? bottom_end_x_pers : 30 , 60);
             get_distance_line_pers();
             get_narrow_line();
 
@@ -209,7 +219,7 @@ void* realtime_task(void* arg) {
 
             detect_count_max = get_border_line(80);
             outbounds_detection();
-            // });
+            });
             // vofa_tcp.imwrite((uint8_t *)contrast_image, 80, 60);
 
             // vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
@@ -278,7 +288,8 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%.2f\n",image_diff,left_reach_edge,right_reach_edge,turn_angle);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d\n",flag.stop);
-            vofa_udp.printf("%d,%d,%d,%d\n",bottom_start_x_pers, bottom_end_x_pers,max_white_column_pers.left_x,max_white_column_pers.right_x);
+            vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",bottom_start_x_pers, bottom_end_x_pers,max_white_column_pers.left_x,max_white_column_pers.right_x,max_white_column_pers.left_height,max_white_column_pers.right_height,dis_index,distances_pers[dis_index],narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle);
+            // vofa_udp.printf("%d,%d\n",dis_index,distance_middle_line_pers[dis_index][0]);
 
             // 速度环PID
             if(flag.stop){
@@ -537,6 +548,7 @@ void element_check() {
     check_crossroad();
     check_garage();
     // check_ramp();
+    check_obstacle();
     check_roundabout();
 }
 
@@ -593,7 +605,8 @@ void *non_realtime_task(void *arg) {
     cv::Mat gray;
     cv::Mat gray1ch(60, 80, CV_8UC1, (void*)gray1ch_image);
     cv::Mat gray3ch;
-    cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
+    cv::Mat cv_image(60, 40, CV_8UC1, binary_pers_image); // 60行40列的灰度图
+    cv::Mat cv_image3ch;
     std::vector<uchar> jpg;
     int iii=0;
     while (running) {
@@ -624,10 +637,15 @@ void *non_realtime_task(void *arg) {
                 tft180_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
                 tft180_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
                 tft180_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0, 0, 0));
-            // MEASURE_TIME("http write", {
-                vofa_tcp.imwrite(gray3ch);
 
-                // vofa_tcp.imwrite(cv_image);
+                cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
+                tft180_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0, 0));
+                tft180_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0, 0));
+                tft180_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
+            // MEASURE_TIME("http write", {
+                // vofa_tcp.imwrite(gray3ch);
+
+                vofa_tcp.imwrite(cv_image3ch);
                 // http << gray3ch;
             });
     }

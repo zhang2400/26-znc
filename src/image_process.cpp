@@ -133,7 +133,7 @@ void bottom_start_end_x_get_pers(){
     int maxLength = 0;
     int currentLength = 0;
     for (int i = 0; i < 40; i++) {
-        if (gray_binary_pers_image[50][i] == 255) {
+        if (gray_binary_pers_image[53][i] == 255) {
             if (currentStartIndex == -1) {
                 currentStartIndex = i;
             }
@@ -354,6 +354,60 @@ int check_ramp(){
         flag.found_ramp = true;
     }
     return flag.found_ramp;
+}
+
+
+int check_obstacle(){
+    flag.found_obstacle = false;
+
+    if(narrow_line_index > 8){
+        flag.found_obstacle = true;
+        float Ax;
+        float Ay;
+        float Bx;
+        float By;
+        float Cx;
+        float Cy;
+        uint8 Aindex = 60 - narrow_line[0][1] - 4;
+        uint8 Bindex = 60 - narrow_line[narrow_line_index/2][1] - 2;
+        uint8 Cindex = 60 - narrow_line[narrow_line_index - 1][1] + 4;
+        Bx = left_distance_line_pers[Bindex][0];
+        By = left_distance_line_pers[Bindex][1];
+        Ax = left_distance_line_pers[Aindex][0];
+        Ay = left_distance_line_pers[Aindex][1];
+        Cx = left_distance_line_pers[Cindex][0];
+        Cy = left_distance_line_pers[Cindex][1];
+//        narrow_line[narrow_line_index][0] = Ax;
+//        narrow_line[narrow_line_index++][1] = Ay;
+//        narrow_line[narrow_line_index][0] = Bx;
+//        narrow_line[narrow_line_index++][1] = By;
+//        narrow_line[narrow_line_index][0] = Cx;
+//        narrow_line[narrow_line_index++][1] = Cy;
+        float left_dis = distance_to_line(Ax, Ay, Bx, By, Cx, Cy);
+        float left_ang = get_angle(Ax, Ay, Bx, By, Cx, Cy);
+        Bx = right_distance_line_pers[Bindex][0];
+        By = right_distance_line_pers[Bindex][1];
+        Ax = right_distance_line_pers[Aindex][0];
+        Ay = right_distance_line_pers[Aindex][1];
+        Cx = right_distance_line_pers[Cindex][0];
+        Cy = right_distance_line_pers[Cindex][1];
+//        narrow_line[narrow_line_index][0] = Ax;
+//        narrow_line[narrow_line_index++][1] = Ay;
+//        narrow_line[narrow_line_index][0] = Bx;
+//        narrow_line[narrow_line_index++][1] = By;
+//        narrow_line[narrow_line_index][0] = Cx;
+//        narrow_line[narrow_line_index++][1] = Cy;
+        float right_dis = distance_to_line(Ax, Ay, Bx, By, Cx, Cy);
+        float right_ang = get_angle(Ax, Ay, Bx, By, Cx, Cy);
+        if(left_dis > right_dis){
+            flag.advance_avoid_obstacle_dir = -1;
+        } else {
+            flag.advance_avoid_obstacle_dir = 1;
+        }
+    } else {
+        flag.advance_avoid_obstacle_dir = 0;
+    }
+    return flag.found_obstacle;
 }
 
 int check_garage() {
@@ -582,11 +636,11 @@ void get_lost_count() {
 void get_narrow_line(){
     memset(narrow_line, 0, sizeof(narrow_line));
     narrow_line_index = 0;
-    if(max_white_column_pers.left_height < 14) return;
+    if(max_white_column_pers.left_height < 19) return;
     int max_y = max_white_column_pers.left_height - 5;
-    if(max_y > 30) max_y = 30;
-    for(int q = 0; q < max_y; q++){
-        if(distances_pers[q] < 8){
+    if(max_y > 50) max_y = 50;
+    for(int q = 5; q < max_y; q++){
+        if(distances_pers[q] <= 10){
             int _x = distance_middle_line_pers[q][0];
             int _y = distance_middle_line_pers[q][1];
             if(narrow_line_index > 0 && abs(_y - narrow_line[narrow_line_index - 1][1]) > 3) break;
@@ -672,7 +726,7 @@ void get_distance_line_pers(){
             }
         }
         for(int x = right_x; x < 40; x++) {
-            if (binary_pers_image[y][x] == 255 || x == 60) {
+            if (binary_pers_image[y][x] == 255 || x == 38) {
                 right_distance_line_pers[distance_index_pers][0] = x;
                 right_distance_line_pers[distance_index_pers][1] = y;
                 right_distance_pers[distance_index_pers][0] = x - right_x;
@@ -1016,7 +1070,7 @@ int get_border_line_pers(int detect_count_max) {
     memset(right_dirs_pers, 0, sizeof(right_dirs_pers));
     // 初始边界点在道路内
     int first_x;
-    int first_y = 38;
+    int first_y = 50;
     for (first_x = (bottom_start_x_pers + bottom_end_x_pers) / 2; first_x > 0; first_x--) {
         if (binary_pers_image[first_y][first_x] == road_color && binary_pers_image[first_y][first_x - 1] != road_color) {
             left_border_pers[left_border_index_pers][0] = first_x;
@@ -1365,7 +1419,7 @@ void calculate_contrast_x8(uint8_t *dst_image, const uint8_t *src_image, int16_t
 
 void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
     const int max_points = 100;
-    int i = 2;
+    int i = 7;
 
     while (i < max_points && (line[i][0] != 0 || line[i][1] != 0)) {
         const int px = x + line[i][0];

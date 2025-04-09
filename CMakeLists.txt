@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(loongson_camera)
 
-set(USE_OPENCV_MOBILE OFF)
+set(USE_OPENCV_MOBILE ON)
 
 if(USE_OPENCV_MOBILE)
     set(CUSTOM_OPENCV_DIR "opencv-mobile")
