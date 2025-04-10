@@ -30,7 +30,7 @@ enum Polarity {
 
 // 图像处理
 #define DISTANCE(x1, y1, x2, y2) sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2))
-#define IMAGE_MIDDLE            37
+#define IMAGE_MIDDLE            37.2
 
 // MATH
 #define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
@@ -40,9 +40,9 @@ enum Polarity {
 // 舵机配置
 #define SERVO_MOTOR_DUTY(x)         ((float)PWM_DUTY_MAX/(1000.0/(float)SERVO_MOTOR_FREQ)*(0.5+(float)(x)/90.0))
 
-#define SERVO_MOTOR_MID             (83.5)              // 定义主板上舵机中间位置 角度
-#define SERVO_MOTOR_L_MAX           (SERVO_MOTOR_MID - 14)             // 定义主板上舵机活动范围 角度
-#define SERVO_MOTOR_R_MAX           (SERVO_MOTOR_MID + 14)              // 定义主板上舵机活动范围 角度
+#define SERVO_MOTOR_MID             (82.5)              // 定义主板上舵机中间位置 角度
+#define SERVO_MOTOR_L_MAX           (SERVO_MOTOR_MID - 15)             // 定义主板上舵机活动范围 角度
+#define SERVO_MOTOR_R_MAX           (SERVO_MOTOR_MID + 15)              // 定义主板上舵机活动范围 角度
 
 #define SERVO_MOTOR_PWM             (GTIM1_GPIO88)                 // 定义主板上舵机对应引脚
 #define SERVO_MOTOR_FREQ            (50)              // 定义主板上舵机频率

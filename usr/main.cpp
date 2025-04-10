@@ -17,13 +17,13 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 70;
+float speed_setpoint = 75;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
 float turn_pidout = 0;
 float turn_angle = 0;
-float turn_max = 14;
+float turn_max = 15;
 
 float Kp_max = 0.022f;
 float Kd_max = 0.20f;
@@ -77,7 +77,7 @@ int protect = true;
 int i = SERVO_MOTOR_MID;
 int j = 0;
 int running_time = 2000;
-int stop_in_garage = true;
+int stop_in_garage = false;
 
 BEEP beep(GPIO61);
 Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
@@ -159,7 +159,7 @@ void* realtime_task(void* arg) {
                 LOGW("timer_event", "定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
 
-            MEASURE_TIME("realtime_task_cost", {
+            // MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
             printf("Anglez:%f\n", icm20948_data.anglez);
             // });
@@ -219,7 +219,7 @@ void* realtime_task(void* arg) {
 
             detect_count_max = get_border_line(80);
             outbounds_detection();
-            });
+            // });
             // vofa_tcp.imwrite((uint8_t *)contrast_image, 80, 60);
 
             // vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
@@ -267,7 +267,7 @@ void* realtime_task(void* arg) {
             }
 
             Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
-
+            MEASURE_TIME("realtime_task_cost", {
             // vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
             // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d\n",max_white_column.left_x,max_white_column.right_x,max_white_column.start_y,max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0],counter.drive_in_ramp, flag.found_ramp);
@@ -291,6 +291,7 @@ void* realtime_task(void* arg) {
             vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",bottom_start_x_pers, bottom_end_x_pers,max_white_column_pers.left_x,max_white_column_pers.right_x,max_white_column_pers.left_height,max_white_column_pers.right_height,dis_index,distances_pers[dis_index],narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle);
             // vofa_udp.printf("%d,%d\n",dis_index,distance_middle_line_pers[dis_index][0]);
 
+            });
             // 速度环PID
             if(flag.stop){
                 speed_setpoint = 0;
@@ -301,7 +302,7 @@ void* realtime_task(void* arg) {
             right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
 
             Moto_L.set_speed((int)left_wheel_pidout);
-            Moto_R.set_speed(-(int)right_wheel_pidout);
+            Moto_R.set_speed((int)right_wheel_pidout);
 
             image_diff_process();
 
@@ -416,6 +417,23 @@ void element_count() {
 
     if(counter.drive_in_ramp > 0){
         counter.drive_in_ramp -= 10;
+    }
+
+    // 障碍计数处理
+    if(flag.found_obstacle == true && counter.drive_in_obstacle == 0 && counter.drive_in_ramp == 0 && counter.drive_in_obstacle == 0) {
+        counter.found_obstacle +=2;
+        if (counter.found_obstacle > 7) {
+            beep.beep_ms(200);
+            counter.drive_in_obstacle = 1000;
+        }
+    }
+
+    if (flag.found_obstacle > 0) {
+        flag.found_obstacle--;
+    }
+
+    if (counter.drive_in_obstacle > 0) {
+        counter.drive_in_obstacle -= 10;
     }
 
     // 左环岛计数处理
@@ -562,8 +580,20 @@ void image_diff_process() {
         }
         left_sum *= 35;
         image_diff = right_sum - left_sum;
-    }
-    else if(counter.drive_in_ramp > 0 && counter.drive_in_ramp < 280){
+    }else if(counter.drive_in_obstacle > 0  && counter.drive_in_obstacle <= 800) {
+        left_sum = 0;
+        right_sum = 0;
+        int img_start = 12;
+        if(img_start < incision)img_start = incision;
+        int img_end = img_start + 50;
+        if(img_end > detect_count_max) img_end = detect_count_max;
+        for(int i = img_start; i < img_end; i++) {
+            left_sum -= (middle_line[i][0] - IMAGE_MIDDLE);
+        }
+        left_sum *= 10;
+        left_sum += (4000 * flag.advance_avoid_obstacle_dir);
+        image_diff = right_sum - left_sum;
+    }else if(counter.drive_in_ramp > 0 && counter.drive_in_ramp < 280){
         right_sum = 0;
         left_sum = -(icm20948_data.anglez - ramp_angle) * 50;
         image_diff = right_sum - left_sum;
@@ -586,13 +616,13 @@ void image_diff_process() {
     if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
     (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
         if (image_diff < 0) {
-            image_diff -= left_reach_edge * 60;
+            image_diff -= left_reach_edge * 80;
         }else {
             image_diff += right_reach_edge * 60;
         }
-    }else if (left_reach_edge > 25 || right_reach_edge > 25) {
+    }else if (left_reach_edge > 20 || right_reach_edge > 25) {
         if (image_diff < 0) {
-            image_diff -= left_reach_edge * 20;
+            image_diff -= left_reach_edge * 30;
         }else {
             image_diff += right_reach_edge * 20;
         }
@@ -605,7 +635,7 @@ void *non_realtime_task(void *arg) {
     cv::Mat gray;
     cv::Mat gray1ch(60, 80, CV_8UC1, (void*)gray1ch_image);
     cv::Mat gray3ch;
-    cv::Mat cv_image(60, 40, CV_8UC1, binary_pers_image); // 60行40列的灰度图
+    cv::Mat cv_image(60, 40, CV_8UC1, contrast_pers_image); // 60行40列的灰度图
     cv::Mat cv_image3ch;
     std::vector<uchar> jpg;
     int iii=0;
@@ -613,7 +643,7 @@ void *non_realtime_task(void *arg) {
             // fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
-                memcpy(gray1ch_image,gray_image, 80 * 60);
+                memcpy(gray1ch_image,binary_image, 80 * 60);
                 // memcpy(gray1ch_image, binary_image, 80 * 60);
                 cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
