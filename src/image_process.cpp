@@ -21,6 +21,8 @@ uint8_t left_border_pers[100][2];  // 左边界
 uint8_t right_border_pers[100][2];  // 右边界
 int left_dirs_pers[100];  // 左爬线方向
 int right_dirs_pers[100];  // 右爬线方向
+uint8_t left_border_single[100][2];  // 左边界单Y
+uint8_t right_border_single[100][2];  // 右边界单Y
 uint8_t middle_line[100][2];  // 中线
 uint8_t middle_line_single[100][2];  // 中线单Y
 uint8_t middle_line_pers[100][2];  // 中线
@@ -42,8 +44,10 @@ uint8_t narrow_line[100][2];  // 窄线(障碍物)
 int max_middle_line_height = 0;
 int left_border_index = 0;
 int left_border_index_pers = 0;
+int left_border_single_index = 0;
 int right_border_index = 0;
 int right_border_index_pers = 0;
+int right_border_single_index = 0;
 int left_skip_index = 0;
 int right_skip_index = 0;
 int middle_line_index = 0;
@@ -133,7 +137,7 @@ void bottom_start_end_x_get_pers(){
     int maxLength = 0;
     int currentLength = 0;
     for (int i = 0; i < 40; i++) {
-        if (gray_binary_pers_image[53][i] == 255) {
+        if (gray_binary_pers_image[59][i] == 255) {
             if (currentStartIndex == -1) {
                 currentStartIndex = i;
             }
@@ -819,6 +823,11 @@ void draw_rectan(){
     for (i = 0; i < 60; i++){
         binary_image[i][0] = border_color;
         binary_image[i][80 - 1] = border_color;
+        binary_image[i][80 - 2] = border_color;
+        binary_image[i][80 - 3] = border_color;
+        binary_image[i][80 - 4] = border_color;
+        binary_image[i][80 - 5] = border_color;
+        binary_image[i][80 - 6] = border_color;
     }
     for (i = 0; i < 80; i++){
         binary_image[0][i] = border_color;
@@ -925,7 +934,7 @@ int get_border_line(int detect_count_max) {
             break;
         }
 
-        if (left_x < 4) left_reach_edge++;
+        if (left_x < 3 && left_border_index < 15) left_reach_edge++;
         if (left_x > 10) flag.left_border = false;
         if (left_x > 60) flag.need_sec_border = true;
         left_border_index++;
@@ -944,7 +953,7 @@ int get_border_line(int detect_count_max) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index;
             }
-        } else if(right_y < 20 || (detect_count > 25 && right_x > 77)) {
+        } else if(right_y < 20 || (detect_count > 25 && right_x > 70)) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index;
             }
@@ -988,8 +997,8 @@ int get_border_line(int detect_count_max) {
         } else {
             break;
         }
-        if (right_x > 76) right_reach_edge++;
-        if (right_x < 70) flag.right_border = false;
+        if (right_x > 70 && right_border_index < 15) right_reach_edge++;
+        if (right_x < 65) flag.right_border = false;
         if (right_x < 20) flag.need_sec_border = true;
         right_border_index++;
         if (right_border_index != 0){
@@ -1021,7 +1030,7 @@ int get_border_line(int detect_count_max) {
 
     if (flag.need_sec_border && flag.right_sec_border && flag.right_border) {
         for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
-            right_border[detect_count][0] = 79;
+            right_border[detect_count][0] = 73;
             right_border[detect_count][1] = 58;
         }
     }
@@ -1070,7 +1079,7 @@ int get_border_line_pers(int detect_count_max) {
     memset(right_dirs_pers, 0, sizeof(right_dirs_pers));
     // 初始边界点在道路内
     int first_x;
-    int first_y = 50;
+    int first_y = 57;
     for (first_x = (bottom_start_x_pers + bottom_end_x_pers) / 2; first_x > 0; first_x--) {
         if (binary_pers_image[first_y][first_x] == road_color && binary_pers_image[first_y][first_x - 1] != road_color) {
             left_border_pers[left_border_index_pers][0] = first_x;
@@ -1098,7 +1107,7 @@ int get_border_line_pers(int detect_count_max) {
             if(left_skip_index == 0){
                 left_skip_index = left_border_index_pers;
             }
-        } else if(left_y < 3 || left_x < 3 || left_x > 44) {
+        } else if(left_y < 3 || left_x < 3 || left_x > 37) {
             if(left_skip_index == 0){
                 left_skip_index = left_border_index_pers;
             }
@@ -1157,7 +1166,7 @@ int get_border_line_pers(int detect_count_max) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index_pers;
             }
-        } else if(right_y < 3 || right_x > 44 || right_x < 3) {
+        } else if(right_y < 3 || right_x > 37 || right_x < 3) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index_pers;
             }
@@ -1170,11 +1179,11 @@ int get_border_line_pers(int detect_count_max) {
                   binary_pers_image[right_y - 1][right_x - 1] == border_color){  // 正左黑，方向5，正上白
             right_x = right_x - 1;
             right_dir = 4;
-        } else if(left_dir != 1 && binary_pers_image[right_y - 1][right_x] == road_color &&
+        } else if(right_dir != 1 && binary_pers_image[right_y - 1][right_x] == road_color &&
                   binary_pers_image[right_y - 1][right_x + 1] == border_color){  // 正上黑，方向1，右上白
             right_y = right_y - 1;
             right_dir = 0;
-        } else if (right_x < 80 && right_dir != 3 && binary_pers_image[right_y - 1][right_x + 1] == road_color &&
+        } else if (right_dir != 3 && binary_pers_image[right_y - 1][right_x + 1] == road_color &&
                    binary_pers_image[right_y][right_x + 1] == border_color){  // 右上黑，方向3，正右白
             right_y = right_y - 1;
             right_x = right_x + 1;
@@ -1233,7 +1242,7 @@ int get_border_line_pers(int detect_count_max) {
         }
     }
 
-    return detect_count_max > 41 ? 41 : detect_count_max;
+    return detect_count_max ;
 }
 
 void get_max_middle_line_height(){
@@ -1419,7 +1428,7 @@ void calculate_contrast_x8(uint8_t *dst_image, const uint8_t *src_image, int16_t
 
 void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
     const int max_points = 100;
-    int i = 7;
+    int i = 0;
 
     while (i < max_points && (line[i][0] != 0 || line[i][1] != 0)) {
         const int px = x + line[i][0];
@@ -1439,7 +1448,7 @@ void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][
 void tft180_draw_real_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
     int i = incision;
 
-    while (i < detect_count_max && (line[i][0] != 0 || line[i][1] != 0)) {
+    while (i < incision+40 && (line[i][0] != 0 || line[i][1] != 0)) {
         const int px = x + line[i][0];
         const int py = y + line[i][1];
 
@@ -1461,6 +1470,15 @@ void cover_car_head(){
         }
     }
 }
+
+void cover_car_head_pers(){
+    for(int x = 0; x < 40; x++){
+        for(int y = 58; y < 60; y++){
+            gray_pers_image[y][x] = gray_pers_image[y-1][x];
+        }
+    }
+}
+
 
 void outbounds_detection(void){
     for(int i = 59;i > 0;i--) {
