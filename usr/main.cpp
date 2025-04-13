@@ -64,7 +64,7 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("192.168.151.199", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("192.168.151.181", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int incision = 0;
@@ -161,7 +161,7 @@ void* realtime_task(void* arg) {
 
             // MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
-            printf("Anglez:%f\n", icm20948_data.anglez);
+            // printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
             // MEASURE_TIME("realtime_task_cost", {
@@ -175,7 +175,7 @@ void* realtime_task(void* arg) {
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
             ImagePerspective();
-
+            cover_car_head_pers();
             calculate_contrast_x8(reinterpret_cast<uint8_t *>(contrast_image), reinterpret_cast<const uint8_t *>(gray_image), 80, 60);
             memcpy((uint8_t *) binary_image, (const uint8_t *) contrast_image, 80 * 60);
             // MEASURE_TIME("rt task", {
@@ -233,9 +233,6 @@ void* realtime_task(void* arg) {
             if ((counter.drive_in_left_roundabout > 200) || (counter.drive_in_right_roundabout)) {
                 wheel_turn_pid.Kp = Kp_max * 0.5;
                 wheel_turn_pid.Kd = Kd_max * 0.5;
-            }else if (counter.drive_in_crossroad > 800){
-                wheel_turn_pid.Kp = Kp_max * 0.4;
-                wheel_turn_pid.Kd = Kd_max * 0.4;
             }else{
                 wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 8000)) + 0.3);
                 wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 8000)) + 0.4);
@@ -285,8 +282,9 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
             // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,counter.found_garage, garage_count,detect_count_max);
-            // vofa_udp.printf("%d,%d,%d,%.2f\n",image_diff,left_reach_edge,right_reach_edge,turn_angle);
-                // vofa_udp.printf("maxwhiteheight%d\n",max_white_column.left_height);
+            vofa_udp.printf("%d,%d,%.2f\n",image_diff,counter.drive_in_crossroad,turn_angle);
+                // vofa_udp.printf("crossroad:%d,diff%d\n",counter.drive_in_crossroad,image_diff);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d\n",flag.stop);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",bottom_start_x_pers, bottom_end_x_pers,max_white_column_pers.left_x,max_white_column_pers.right_x,max_white_column_pers.left_height,max_white_column_pers.right_height,dis_index,distances_pers[dis_index],narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle);
@@ -475,17 +473,17 @@ void element_count() {
 void element_process() {
     // 十字
     if (counter.drive_in_crossroad > 50) {
-        if (counter.drive_in_crossroad > 50) {
-            fix_crossroad();
-        }
+        // if (counter.drive_in_crossroad > 50) {
+        //     fix_crossroad();
+        // }
         if(flag.found_crossroad) {
             counter.drive_in_crossroad = 4000;
-        } else if (distances[5] > road_distances[5] && rstate == 0 && counter.drive_in_crossroad >= 50){
+        } else if (distances[5] > road_distances[10] + 5 && rstate == 0){
             rstate = 1;
-            counter.drive_in_crossroad = 800;
-        } else if(distances[5] < road_distances[5] + 5 && rstate == 1){
+            counter.drive_in_crossroad = 2500;
+        } else if(distances[5] < road_distances[10] + 5 && rstate == 1){
             rstate = 0;
-            counter.drive_in_crossroad = 200;
+            counter.drive_in_crossroad = 0;
             flag.drive_in_crossroad = !flag.drive_in_crossroad;
         }
     }
@@ -572,14 +570,16 @@ void element_check() {
 }
 
 void image_diff_process() {
-    if((counter.drive_in_crossroad > 400 && counter.drive_in_obstacle == 0)) {
+    if(counter.drive_in_crossroad > 400 && counter.drive_in_obstacle == 0) {
         // 十字处理
         left_sum = 0;
         right_sum = 0;
         for(int i = 0; i < distance_middle_line_index; i++){
-            left_sum -= (distance_middle_line[i][0] - IMAGE_MIDDLE);
+            float y_weight= 60 - distance_middle_line[i][1];
+            if (y_weight<0) y_weight=0;
+            left_sum -= (float)(distance_middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
         }
-        left_sum *= 35;
+        left_sum *= 30;
         image_diff = right_sum - left_sum;
     }else if(counter.drive_in_obstacle > 0  && counter.drive_in_obstacle <= 900) {
         left_sum = 0;
@@ -593,10 +593,6 @@ void image_diff_process() {
         }
         left_sum *= 10;
         left_sum += (4000 * flag.advance_avoid_obstacle_dir);
-        image_diff = right_sum - left_sum;
-    }else if(counter.drive_in_ramp > 0 && counter.drive_in_ramp < 280){
-        right_sum = 0;
-        left_sum = -(icm20948_data.anglez - ramp_angle) * 50;
         image_diff = right_sum - left_sum;
     }else {
         left_sum = 0;
@@ -638,19 +634,18 @@ void image_diff_process() {
 void *non_realtime_task(void *arg) {
     auto atag = mytag("tag36h11", 1.5, 0, 1, false, false);
     cv::Mat gray;
-    cv::Mat gray1ch(60, 80, CV_8UC1, (void*)gray1ch_image);
+    cv::Mat gray1ch(60, 80, CV_8UC1, (void*)binary_image);
     cv::Mat gray3ch;
     cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
     cv::Mat cv_image3ch;
     std::vector<uchar> jpg;
-    int iii=0;
     while (running) {
+            cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
-                memcpy(gray1ch_image,gray_image, 80 * 60);
+                // memcpy(gray1ch_image,gray_image, 80 * 60);
                 // memcpy(gray1ch_image, binary_image, 80 * 60);
-                cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
             // });
             MEASURE_TIME("detect_time", {
                 atag.detect(gray);
@@ -671,7 +666,7 @@ void *non_realtime_task(void *arg) {
                 tft180_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
                 tft180_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
                 tft180_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
-                tft180_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0, 0, 0));
+                tft180_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
 
                 cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
                 tft180_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));

@@ -318,18 +318,13 @@ void max_white_column_get_pers(int16_t x1, int16_t y1, int16_t x2, int16_t y2){
 
 int check_crossroad(){
     flag.found_crossroad = false;
-    if(lost_x1 && lost_x2 && lost_y1 && lost_y2
-        && abs(lost_x1 - lost_x2) < 10
-        && left_reach_edge > 30 && right_reach_edge > 30
-        && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
+    if(left_lost_count > 6 && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;
         counter.drive_in_left_roundabout = 0;
         counter.drive_in_right_roundabout = 0;
         return true;
-    } else {
-        return false;
     }
-    return flag.found_crossroad;
+    return false;
 }
 
 int check_roundabout(){
@@ -494,8 +489,8 @@ void fix_right_break(uint16_t y1, uint16_t y2){
 }
 
 void fix_crossroad(){
-    fix_x1 = middle_line[60-lost_y1-8][0];
-    fix_y1 = middle_line[60-lost_y1-8][1];
+    fix_x1 = middle_line[60-lost_y1-10][0];
+    fix_y1 = middle_line[60-lost_y1-10][1];
     fix_x2 = lost_x2;
     fix_y2 = lost_y2;
 
@@ -560,79 +555,16 @@ void get_lost_count() {
     right_lost_count = 0;
     left_lost_dir = 0;
     right_lost_dir = 0;
-    int target_distance = 7;
+    int target_distance = 20;
     int target_lost_y1 = 30;
 
-    if (lost_x1 == 0 || lost_y1 == 0 || lost_x2 == 0 || lost_y2 == 0 || max_white_column.left_height < 39 || lost_y1 < target_lost_y1) {
+    if (lost_x1 == 0 || lost_y1 == 0 || lost_x2 == 0 || lost_y2 == 0 || max_white_column.left_height < 41 || lost_y1 < target_lost_y1) {
         return;
     }
-    if(lost_x2 - lost_x1 == 0){
-        for(int y = lost_y1; y > lost_y2; y--){
-            int left_dist = 0;
-            int right_dist = 0;
-            for(int x = lost_x1; x >= 0; x--){
-                if(binary_image_bak[y][x] == 0){
-                    left_dist++;
-                    if(left_dist > road_distances[60 - y] / 2 + target_distance){
-                        left_lost_count++;
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-            for(int x = lost_x1; x < 80; x++){
-                if(binary_image_bak[y][x] == 0){
-                    right_dist++;
-                    if(right_dist > road_distances[60 - y] / 2 + target_distance){
-                        right_lost_count++;
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-        }
-    } else {
-        float slope = (float)(lost_y2 - lost_y1) / (float)(lost_x2 - lost_x1);
-        float b = lost_y1 - slope * lost_x1;
-        for (int y = lost_y1; y > lost_y2; y--) {
-            int left_dist = 0;
-            int right_dist = 0;
-            for (int x = (y - b) / slope; x >= 0; x--) {
-                if (binary_image_bak[y][x] == 0) {
-                    left_dist++;
-                    if(left_dist > road_distances[60 - y] / 2 + target_distance){
-                        left_lost_count++;
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-            for (int x = (y - b) / slope; x < 80; x++) {
-                if (binary_image_bak[y][x] == 0) {
-                    right_dist++;
-                    if(right_dist > road_distances[60 - y] / 2 + target_distance){
-                        right_lost_count++;
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-        }
-    }
-    for(int dir_index = left_skip_index - 10; dir_index < left_skip_index; dir_index++){
-        int left_dir = left_dirs[dir_index];
-        if(left_dir == 4 || left_dir == 7){
-            left_lost_dir++;
-        }
-    }
-    for(int dir_index = right_skip_index - 10; dir_index < right_skip_index; dir_index++){
-        int right_dir = right_dirs[dir_index];
-        if(right_dir == 5 || right_dir == 6){
-            right_lost_dir++;
+    int maxindex = std::min(distance_middle_line_index_pers, 25);
+    for (int i = 0; i<maxindex;i++) {
+        if (distances_pers[i] > target_distance) {
+            left_lost_count++;
         }
     }
 }
