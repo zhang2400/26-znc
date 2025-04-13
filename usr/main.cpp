@@ -5,7 +5,7 @@
 #include <linux/videodev2.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-float CAR_ANGLE_CONVERT = 3.1f;
+float CAR_ANGLE_CONVERT = 3.0f;
 
 // PID相关变量
 PID_Incremental left_wheel_speed_pid;
@@ -17,7 +17,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_setpoint = 75;
+float speed_setpoint = 70;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
 
@@ -26,7 +26,7 @@ float turn_angle = 0;
 float turn_max = 15;
 
 float Kp_max = 0.013f;
-float Kd_max = 0.17f;
+float Kd_max = 0.12f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -89,8 +89,8 @@ double distance = -1;
 
 void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
-    left_wheel_speed_pid = PID_Incremental_Init(50, 12, 4, 7000, -7000, false, 0.25f);
-    right_wheel_speed_pid = PID_Incremental_Init(50, 12, 4, 7000, -7000, false, 0.25f);
+    left_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
+    right_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
 
     Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 
@@ -242,7 +242,7 @@ void* realtime_task(void* arg) {
             Moto_R.update_speed();
 
             // 位置环PID(需要优化)
-            turn_pidout = PID_Position_Calc(&wheel_turn_pid, 0, (float) icm20948_data.gz, (float) image_diff);
+            turn_pidout = PID_Position_Calc(&wheel_turn_pid, 0, 0, (float) image_diff);
             turn_angle = turn_pidout / 10;
 
             if(turn_angle > turn_max) turn_angle = turn_max;
@@ -282,7 +282,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
             // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,counter.found_garage, garage_count,detect_count_max);
-            vofa_udp.printf("%d,%d,%.2f\n",image_diff,counter.drive_in_crossroad,turn_angle);
+            vofa_udp.printf("%d,%d,%.2f,%d\n",image_diff,counter.drive_in_crossroad,turn_angle,counter.drive_in_obstacle);
                 // vofa_udp.printf("crossroad:%d,diff%d\n",counter.drive_in_crossroad,image_diff);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
@@ -329,7 +329,19 @@ void* realtime_task(void* arg) {
                 flag.stop = true;
             }
 
-            if (Moto_L.speed > 10 || Moto_R.speed > 10) {
+            if (Moto_L.speed > 20 || Moto_R.speed > 20) {
+                if (flag.start == false) {
+                    left_wheel_speed_pid.error = 0;
+                    left_wheel_speed_pid.last_error = 0;
+                    left_wheel_speed_pid.last_last_error = 0;
+                    left_wheel_speed_pid.last_out = 0;
+                    left_wheel_speed_pid.out = 0;
+                    right_wheel_speed_pid.error = 0;
+                    right_wheel_speed_pid.last_error = 0;
+                    right_wheel_speed_pid.last_last_error = 0;
+                    right_wheel_speed_pid.last_out = 0;
+                    right_wheel_speed_pid.out = 0;
+                }
                 flag.start = true;
             }
 
@@ -570,7 +582,7 @@ void element_check() {
 }
 
 void image_diff_process() {
-    if(counter.drive_in_crossroad > 400 && counter.drive_in_obstacle == 0) {
+    if(counter.drive_in_crossroad > 400) {
         // 十字处理
         left_sum = 0;
         right_sum = 0;
@@ -579,7 +591,7 @@ void image_diff_process() {
             if (y_weight<0) y_weight=0;
             left_sum -= (float)(distance_middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
         }
-        left_sum *= 30;
+        left_sum *= 15;
         image_diff = right_sum - left_sum;
     }else if(counter.drive_in_obstacle > 0  && counter.drive_in_obstacle <= 900) {
         left_sum = 0;
@@ -613,7 +625,6 @@ void image_diff_process() {
         // left_sum += 4000 * cornering;
         image_diff = right_sum - left_sum;
     }
-
     // if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
     // (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
     //     if (image_diff < 0) {
