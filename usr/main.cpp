@@ -67,8 +67,8 @@ auto vofa_tcp = VOFA(std::move(tcp_transport));
 auto udp_transport = std::make_unique<UDPTransport>("192.168.151.199", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
-int incision = 10;
-int incision_max = 10;
+int incision = 0;
+int incision_max = 0;
 int detect_count_max = 0;
 
 int blind_line;
@@ -77,7 +77,7 @@ int protect = true;
 int i = SERVO_MOTOR_MID;
 int j = 0;
 int running_time = 15000;
-int stop_in_garage = false;
+int stop_in_garage = true;
 
 BEEP beep(GPIO61);
 Moto Moto_L(PWM1_GPIO65, 75, PWM0_GPIO64, 73, false);
@@ -601,7 +601,7 @@ void image_diff_process() {
     }else {
         left_sum = 0;
         right_sum = 0;
-        int img_start = 12;
+        int img_start = 0;
         if(img_start < incision)img_start = incision;
         int img_end = img_start + 40;
         if(img_end > detect_count_max) img_end = detect_count_max;
