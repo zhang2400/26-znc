@@ -77,7 +77,8 @@ int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 3000;
+int running_time = 1000;
+int delay_time = running_time;
 int stop_in_garage = true;
 
 BEEP beep(GPIO61);
@@ -297,7 +298,8 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d\n",dis_index,distances_pers[5],narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle);
             // vofa_udp.printf("%d,%d\n",dis_index,distance_middle_line_pers[dis_index][0]);
             // vofa_udp.printf("%d,%.2f,%.2f,%.2f\n",flag.stop,speed_setpoint,left_speed_setpoint,right_speed_setpoint);
-                vofa_udp.printf("diff:%d,cnt:%d,kp:%.2f,kd:%.2f,ang:%.2f\n",image_diff,counter.drive_in_left_roundabout,wheel_turn_pid.Kp,wheel_turn_pid.Kd,angelZ - icm20948_data.anglez);
+            // vofa_udp.printf("diff:%d,cnt:%d,kp:%.2f,kd:%.2f,ang:%.2f\n",image_diff,counter.drive_in_left_roundabout,wheel_turn_pid.Kp,wheel_turn_pid.Kd,angelZ - icm20948_data.anglez);
+            vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
             });
             // 速度环PID
             if (flag.stop == false) {
@@ -335,7 +337,7 @@ void* realtime_task(void* arg) {
             }
 
             // 出界检测
-            if(blind_line <= 5 && abs(bottom_start_x - bottom_end_x) <= 20) {
+            if(blind_line <= 5 && abs(bottom_start_x - bottom_end_x) <= 20 && Moto_L.speed > 40 && Moto_R.speed > 40) {
                 counter.out_of_bound += 5;
             }else {
                 counter.out_of_bound = 0;
@@ -344,7 +346,7 @@ void* realtime_task(void* arg) {
                 flag.stop = true;
             }
 
-            if (Moto_L.speed > 20 || Moto_R.speed > 20) {
+            if (Moto_L.speed > 25 || Moto_R.speed > 25) {
                 if (flag.start == false) {
                     left_wheel_speed_pid.error = 0;
                     left_wheel_speed_pid.last_error = 0;
@@ -412,7 +414,7 @@ void element_count() {
     }
 
     // 车库
-    if (flag.found_garage == true && counter.drive_in_ramp == 0 && counter.drive_in_crossroad == 0) {
+    if (flag.found_garage == true && counter.drive_in_ramp == 0 && counter.drive_in_crossroad == 0 && running_time < delay_time - 3000) {
         counter.found_garage += 2;
         if (counter.found_garage > 3) {
             beep.beep_ms(400);
