@@ -77,7 +77,7 @@ int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 1000;
+int running_time = 3000;
 int delay_time = running_time;
 int stop_in_garage = true;
 
@@ -211,7 +211,7 @@ void* realtime_task(void* arg) {
             draw_rectan();
 
             bottom_start_end_x_get_pers();
-            max_white_column_get_pers(bottom_start_x_pers > 10 ? bottom_start_x_pers : 10, 1, bottom_end_x_pers < 30 ? bottom_end_x_pers : 30 , 60);
+            max_white_column_get_pers(bottom_start_x_pers > 10 ? bottom_start_x_pers : 10, 1, bottom_end_x_pers < 30 ? bottom_end_x_pers : 30 , 58);
             get_distance_line_pers();
             get_narrow_line();
 
@@ -286,7 +286,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%.2f,%d,%d\n",id,left_lost_count,right_lost_count,distance,flag.found_left_roundabout,flag.found_right_roundabout);
             // vofa_udp.printf("%f,%f,%d,%d,%.2f,%.2f\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout);
-            // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.1f\n",image_diff,id,left_lost_count,right_lost_count,rstate,counter.drive_in_left_roundabout,angelZ - icm20948_data.anglez);
+            vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.1f\n",image_diff,id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
             // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,c  ounter.found_garage, garage_count,detect_count_max);
@@ -295,11 +295,11 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d\n",flag.stop);
-            // vofa_udp.printf("%d,%d,%d,%d\n",dis_index,distances_pers[5],narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle);
+            // vofa_udp.printf("%d,%d,%d\n",narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle);
             // vofa_udp.printf("%d,%d\n",dis_index,distance_middle_line_pers[dis_index][0]);
             // vofa_udp.printf("%d,%.2f,%.2f,%.2f\n",flag.stop,speed_setpoint,left_speed_setpoint,right_speed_setpoint);
             // vofa_udp.printf("diff:%d,cnt:%d,kp:%.2f,kd:%.2f,ang:%.2f\n",image_diff,counter.drive_in_left_roundabout,wheel_turn_pid.Kp,wheel_turn_pid.Kd,angelZ - icm20948_data.anglez);
-            vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
+            // vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
             });
             // 速度环PID
             if (flag.stop == false) {
@@ -414,7 +414,7 @@ void element_count() {
     }
 
     // 车库
-    if (flag.found_garage == true && counter.drive_in_ramp == 0 && counter.drive_in_crossroad == 0 && running_time < delay_time - 3000) {
+    if (flag.found_garage == true && counter.drive_in_ramp == 0 && counter.drive_in_crossroad == 0 && running_time < delay_time - 2000) {
         counter.found_garage += 2;
         if (counter.found_garage > 3) {
             beep.beep_ms(400);
@@ -450,7 +450,7 @@ void element_count() {
     // 障碍计数处理
     if(flag.found_obstacle == true && counter.drive_in_obstacle == 0 && counter.drive_in_ramp == 0 && counter.drive_in_obstacle == 0) {
         counter.found_obstacle +=2;
-        if (counter.found_obstacle > 5) {
+        if (counter.found_obstacle > 3) {
             beep.beep_ms(200);
             counter.drive_in_obstacle = 1200;
         }
@@ -538,7 +538,7 @@ void element_process() {
     if (counter.drive_in_left_roundabout > 5001) {
         fix_left_break(0,60);
         if (distance != -1) {
-            counter.drive_in_left_roundabout = (float)(5.0f * distance + 4750);
+            counter.drive_in_left_roundabout = (float)(5.0f * distance + 4780);
         }
         angelZ = icm20948_data.anglez;
     }else if(counter.drive_in_left_roundabout > 100) {
@@ -563,7 +563,7 @@ void element_process() {
     if (counter.drive_in_right_roundabout > 5001) {
         fix_right_break(0,60);
         if (distance != -1) {
-            counter.drive_in_right_roundabout = (float)(5.0f * distance + 4750);
+            counter.drive_in_right_roundabout = (float)(5.0f * distance + 4780);
         }
         angelZ = icm20948_data.anglez;
     }else if(counter.drive_in_right_roundabout > 100) {
@@ -622,7 +622,7 @@ void image_diff_process() {
             // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
         }
         left_sum *= 10;
-        left_sum += (5000 * flag.advance_avoid_obstacle_dir);
+        left_sum += (6000 * flag.advance_avoid_obstacle_dir);
         image_diff = right_sum - left_sum;
     }else {
         left_sum = 0;
