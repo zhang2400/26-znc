@@ -358,9 +358,8 @@ int check_ramp(){
 
 int check_obstacle(){
     flag.found_obstacle = false;
-    return 0;
 
-    if(narrow_line_index > 8){
+    if(narrow_line_index > 10){
         flag.found_obstacle = true;
         float Ax;
         float Ay;
@@ -575,9 +574,9 @@ void get_narrow_line(){
     narrow_line_index = 0;
     if(max_white_column_pers.left_height < 19) return;
     int max_y = max_white_column_pers.left_height - 5;
-    if(max_y > 50) max_y = 50;
+    if(max_y > 40) max_y = 40;
     for(int q = 5; q < max_y; q++){
-        if(distances_pers[q] <= 10){
+        if(distances_pers[q] <= 9){
             int _x = distance_middle_line_pers[q][0];
             int _y = distance_middle_line_pers[q][1];
             if(narrow_line_index > 0 && abs(_y - narrow_line[narrow_line_index - 1][1]) > 3) break;
