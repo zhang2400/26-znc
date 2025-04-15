@@ -17,8 +17,8 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 65;
-float boost_ratio = 0.25f;
+float speed_base = 70;
+float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
@@ -66,7 +66,7 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("192.168.43.137", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("192.168.43.165", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int incision = 0;
@@ -315,9 +315,9 @@ void* realtime_task(void* arg) {
                     speed_setpoint = 60;
                 }else {
                     if(max_white_column.left_height > max_white_column_height) {
-                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column_height - max_white_column_height) / 2.8)));
+                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column_height - max_white_column_height) / 3.3)));
                     } else {
-                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column.left_height - max_white_column_height) / 2.8)));
+                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column.left_height - max_white_column_height) / 3.3)));
                     }
                 }
             }
