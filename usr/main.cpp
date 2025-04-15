@@ -65,7 +65,7 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("192.168.188.199", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("192.168.43.137", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int incision = 0;
@@ -77,7 +77,7 @@ int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 18000;
+int running_time = 5000;
 int delay_time = running_time;
 int stop_in_garage = true;
 
@@ -233,13 +233,16 @@ void* realtime_task(void* arg) {
             //     // wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 10000)) + 0.4);
             // }
             if ((counter.drive_in_left_roundabout > 200) || (counter.drive_in_right_roundabout > 200)) {
-                if ((angelZ - icm20948_data.anglez > 70 && angelZ - icm20948_data.anglez < 240)
-                    || (angelZ - icm20948_data.anglez < -70 && angelZ - icm20948_data.anglez > -240)) {
-                    wheel_turn_pid.Kp = Kp_max * 0.6;
-                    wheel_turn_pid.Kd = Kd_max * 0.6;
+
+                if ((angelZ - icm20948_data.anglez > 140 && angelZ - icm20948_data.anglez < 270)
+                    || (angelZ - icm20948_data.anglez < -140 && angelZ - icm20948_data.anglez > -270)) {
+                    max_white_column.left_height = 42;
+                    wheel_turn_pid.Kp = Kp_max * 0.8;
+                    wheel_turn_pid.Kd = Kd_max * 0.8;
                 }else{
-                    wheel_turn_pid.Kp = Kp_max;
-                    wheel_turn_pid.Kd = Kd_max;
+                    max_white_column.left_height = 44;
+                    wheel_turn_pid.Kp = Kp_max * 1.0;
+                    wheel_turn_pid.Kd = Kd_max * 1.0;
                 }
             }else{
                 wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 8000)) + 0.3);
@@ -538,15 +541,15 @@ void element_process() {
     if (counter.drive_in_left_roundabout > 5001) {
         fix_left_break(0,60);
         if (distance != -1) {
-            counter.drive_in_left_roundabout = (float)(5.0f * distance + 4780);
+            counter.drive_in_left_roundabout = (float)(5.0f * distance + 4800);
         }
         angelZ = icm20948_data.anglez;
     }else if(counter.drive_in_left_roundabout > 100) {
         int end_x = 79;
         if(angelZ - icm20948_data.anglez > -100) {
-            erase_top_right_road(end_x - 65, 10, end_x, 60);
+            erase_top_right_road(end_x - 55, 5, end_x, 60);
         } else if(angelZ - icm20948_data.anglez > -320){
-            erase_top_right_road(end_x - 65, 10, end_x, 60);
+            erase_top_right_road(end_x - 55, 5, end_x, 60);
             counter.drive_in_left_roundabout = 500;
         } else if(counter.drive_in_left_roundabout > 300){
             fix_left_break(0, 60);
