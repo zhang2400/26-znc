@@ -77,7 +77,7 @@ int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 3000;
+int running_time = 18000;
 int delay_time = running_time;
 int stop_in_garage = true;
 
@@ -233,13 +233,13 @@ void* realtime_task(void* arg) {
             //     // wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 10000)) + 0.4);
             // }
             if ((counter.drive_in_left_roundabout > 200) || (counter.drive_in_right_roundabout > 200)) {
-                if ((angelZ - icm20948_data.anglez > 70 && angelZ - icm20948_data.anglez < 220)
-                    || (angelZ - icm20948_data.anglez < -70 && angelZ - icm20948_data.anglez > -220)) {
-                    wheel_turn_pid.Kp = Kp_max * 0.5;
-                    wheel_turn_pid.Kd = Kd_max * 0.5;
-                }else{
+                if ((angelZ - icm20948_data.anglez > 70 && angelZ - icm20948_data.anglez < 240)
+                    || (angelZ - icm20948_data.anglez < -70 && angelZ - icm20948_data.anglez > -240)) {
                     wheel_turn_pid.Kp = Kp_max * 0.6;
                     wheel_turn_pid.Kd = Kd_max * 0.6;
+                }else{
+                    wheel_turn_pid.Kp = Kp_max;
+                    wheel_turn_pid.Kd = Kd_max;
                 }
             }else{
                 wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 8000)) + 0.3);
