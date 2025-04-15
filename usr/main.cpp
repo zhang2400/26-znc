@@ -77,7 +77,7 @@ int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 5000;
+int running_time = 18000;
 int delay_time = running_time;
 int stop_in_garage = true;
 
@@ -234,16 +234,16 @@ void* realtime_task(void* arg) {
             // }
             if ((counter.drive_in_left_roundabout > 200) || (counter.drive_in_right_roundabout > 200)) {
 
-                if ((angelZ - icm20948_data.anglez > 140 && angelZ - icm20948_data.anglez < 270)
-                    || (angelZ - icm20948_data.anglez < -140 && angelZ - icm20948_data.anglez > -270)) {
-                    max_white_column.left_height = 42;
-                    wheel_turn_pid.Kp = Kp_max * 0.8;
-                    wheel_turn_pid.Kd = Kd_max * 0.8;
-                }else{
-                    max_white_column.left_height = 44;
-                    wheel_turn_pid.Kp = Kp_max * 1.0;
-                    wheel_turn_pid.Kd = Kd_max * 1.0;
-                }
+                // if ((angelZ - icm20948_data.anglez > 140 && angelZ - icm20948_data.anglez < 270)
+                //     || (angelZ - icm20948_data.anglez < -140 && angelZ - icm20948_data.anglez > -270)) {
+                //     max_white_column.left_height = 42;
+                //     wheel_turn_pid.Kp = Kp_max * 0.8;
+                //     wheel_turn_pid.Kd = Kd_max * 0.8;
+                // }else{
+                    max_white_column.left_height = 43;
+                    wheel_turn_pid.Kp = Kp_max;
+                    wheel_turn_pid.Kd = Kd_max;
+                // }
             }else{
                 wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 8000)) + 0.3);
                 wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 8000)) + 0.4);
@@ -421,7 +421,7 @@ void element_count() {
         counter.found_garage += 2;
         if (counter.found_garage > 3) {
             beep.beep_ms(400);
-            counter.drive_in_garage = 1000;
+            counter.drive_in_garage = 200;
         }
     }
 
@@ -525,7 +525,7 @@ void element_process() {
     }
 
     // 车库
-    if (counter.drive_in_garage > 0 && stop_in_garage == true) {
+    if (counter.drive_in_garage > 0 && stop_in_garage == true && counter.drive_in_garage < 50) {
         flag.stop = true;
     }
 
@@ -566,15 +566,15 @@ void element_process() {
     if (counter.drive_in_right_roundabout > 5001) {
         fix_right_break(0,60);
         if (distance != -1) {
-            counter.drive_in_right_roundabout = (float)(5.0f * distance + 4780);
+            counter.drive_in_right_roundabout = (float)(5.0f * distance + 4850);
         }
         angelZ = icm20948_data.anglez;
     }else if(counter.drive_in_right_roundabout > 100) {
         int start_x = 0;
         if(angelZ - icm20948_data.anglez < 100) {
-            erase_top_left_road(start_x + 65, 10, start_x, 60);
+            erase_top_left_road(start_x + 45, 5, start_x, 60);
         } else if(angelZ - icm20948_data.anglez < 320) {
-            erase_top_left_road(start_x + 65, 10, start_x, 60);
+            erase_top_left_road(start_x + 55, 5, start_x, 60);
             counter.drive_in_right_roundabout = 500;
         } else if(counter.drive_in_right_roundabout > 300){
             fix_right_break(0,45);
@@ -639,9 +639,11 @@ void image_diff_process() {
             if (dec<0) dec=0;
             float y_weight=(float)middle_line[i][1]-dec;
             if (y_weight<0) y_weight=0;
-            // left_sum -= (float)(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight / 20.0f);
-            left_sum -= (float)(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f) * (0.8 + (i - (img_end - img_start) / 2) * 0.08);
-            // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
+            if (running_time > 4500) {
+                left_sum -= (float)(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f) * (0.8 + (i - (img_end - img_start) / 2) * 0.08);
+            }else {
+                left_sum -= (float)(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight / 20.0f);
+            }
         }
         left_sum *= 10;
         // left_sum += 4000 * cornering;
