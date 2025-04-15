@@ -17,7 +17,8 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 70;
+float speed_base = 65;
+float boost_ratio = 0.25f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
@@ -77,13 +78,16 @@ int protect = true;
 
 int i = SERVO_MOTOR_MID;
 int j = 0;
-int running_time = 18000;
+int running_time = 16500;
 int delay_time = running_time;
 int stop_in_garage = true;
 
 BEEP beep(GPIO61);
 Moto Moto_R(PWM1_GPIO65, 75, PWM0_GPIO64, 73, true);
 Moto Moto_L(PWM2_GPIO66, 74, PWM3_GPIO67, 72, false);
+
+#define max_white_column_height 45
+#define min_white_column_height 35
 
 // tag码相关变量
 int id = -1;
@@ -305,11 +309,16 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
             });
             // 速度环PID
+
             if (flag.stop == false) {
                 if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
                     speed_setpoint = 60;
                 }else {
-                    speed_setpoint = speed_base;
+                    if(max_white_column.left_height > max_white_column_height) {
+                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column_height - max_white_column_height) / 2.8)));
+                    } else {
+                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column.left_height - max_white_column_height) / 2.8)));
+                    }
                 }
             }
 
@@ -421,7 +430,7 @@ void element_count() {
         counter.found_garage += 2;
         if (counter.found_garage > 3) {
             beep.beep_ms(400);
-            counter.drive_in_garage = 200;
+            counter.drive_in_garage = 180;
         }
     }
 
