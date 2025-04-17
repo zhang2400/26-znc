@@ -69,6 +69,8 @@ extern uint8_t left_border_pers[100][2];  // 左边界
 extern uint8_t right_border_pers[100][2];  // 右边界
 extern uint8_t middle_line_pers[100][2];  // 中线
 extern uint8_t middle_line_single_pers[100][2];  // 中线单Y
+extern uint8_t left_border_single[100][2];  // 左边界单Y
+extern uint8_t right_border_single[100][2];  // 右边界单Y
 extern uint8_t left_distance[100][2];
 extern uint8_t right_distance[100][2];
 extern uint8_t left_distance_pers[100][2];
@@ -173,6 +175,6 @@ uint8_t is_right_corner(float right_Ax, float right_Ay, float right_Bx, float ri
                       float left_Ax, float left_Ay, float left_Bx, float left_By, float left_Cx, float left_Cy);
 
 void cover_car_head();
-
+void cover_car_head_pers();
 void outbounds_detection();
 #endif // SMART_CAR_CAMERA_IMAGE_PROCESS_H

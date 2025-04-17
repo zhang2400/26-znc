@@ -49,7 +49,6 @@ mytag::mytag(const std::string& tagFamily, float decimate, float sigma, int thre
     td->nthreads = threads;
     td->debug = debug;
     td->refine_edges = refine;
-
     detections = nullptr;
     closestTagIndex = -1;
 }
@@ -126,7 +125,7 @@ void mytag::draw(cv::Mat &frame, double zoom) {
                       cv::Point((int)(det->p[3][0] * zoom), (int)((det->p[3][1] + offset) * zoom)), color, 1);
         line(frame, cv::Point((int)(det->p[3][0] * zoom), (int)((det->p[3][1] + offset) * zoom)),
                       cv::Point((int)(det->p[0][0] * zoom), (int)((det->p[0][1] + offset) * zoom)), color, 1);
-        putText(frame, std::to_string((int)det->id), cv::Point((int)(det->c[0] * zoom), (int)((det->c[1] + offset) * zoom + 30)), cv::FONT_HERSHEY_SIMPLEX, 1, color, 1);
+        putText(frame, std::to_string((int)det->id), cv::Point((int)(det->c[0] * zoom), (int)((det->c[1] + offset) * zoom + 30)), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
     }
 }
 

@@ -1,7 +1,8 @@
 #!/bin/bash
 
 #ip="192.168.5.72"
-ip="192.168.151.169"
+#ip="192.168.188.169"
+ip="192.168.43.253"
 username="loongson"
 toolchain_path="loongarch64-linux-gnu-"
 
