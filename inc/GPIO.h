@@ -22,8 +22,11 @@
 #include <cstring>
 
 enum GPIO_pin {
-    GPIO40 = 40,
+    GPIO20 = 20,
+    GPIO22 = 22,
+    GPIO24 = 24,
     GPIO41 = 41,
+    GPIO42 = 42,
     GPIO43 = 43,
     GPIO44 = 44,
     GPIO45 = 45,
@@ -58,5 +61,4 @@ private:
 
     bool writeToFile(const std::string &path, const std::string &value);
 };
-
 #endif // GPIO_H

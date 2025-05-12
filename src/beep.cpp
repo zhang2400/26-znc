@@ -3,7 +3,6 @@
 //
 
 #include "beep.h"
-
 #include <counter.h>
 
 BEEP::BEEP(int beepnum)

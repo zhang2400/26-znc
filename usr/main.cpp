@@ -1,10 +1,5 @@
 #include "main.h"
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <linux/videodev2.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
 float CAR_ANGLE_CONVERT = 3.0f;
 
 // PID相关变量
@@ -66,7 +61,7 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("192.168.43.165", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("192.168.5.72", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int incision = 0;
@@ -79,6 +74,7 @@ int protect = true;
 int i = SERVO_MOTOR_MID;
 int j = 0;
 int running_time = 16500;
+int running_start_time = 0;
 int delay_time = running_time;
 int stop_in_garage = true;
 
@@ -101,6 +97,8 @@ void* realtime_task(void* arg) {
     Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 
     switch_init();
+
+    tft180_init("/dev/fb0");
 
     ret1 = icm20948_i2c_bus_init(icm20948, "/dev/i2c-1", 0x68);
     ret2 = icm20948_configure(icm20948, ACCE_FS_8G, GYRO_FS_2000DPS);
@@ -162,7 +160,7 @@ void* realtime_task(void* arg) {
             LOGI("timer_event", "距离上次事件%.2lfms", time_used.count() * 1000);
             if(std::abs(time_used.count() * 1000 - timer_period) > 1) {
                 // fprintf(stdout,"timer_event 定时器周期不准确，误差: %.2lfms\n", time_used.count() * 1000 - timer_period);
-                LOGW("timer_event", "定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
+                LOGW("timer_event", "`定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
 
             // MEASURE_TIME("realtime_task_cost", {
@@ -707,21 +705,22 @@ void *non_realtime_task(void *arg) {
                 distance = atag.getClosetTagDistance(1500);
                 // cv::putText(gray3ch, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
             // });
-                tft180_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
-                tft180_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
-                tft180_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
-                tft180_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
+                tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
+                tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
+                tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
+                tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
 
                 cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
-                tft180_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
-                tft180_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
-                tft180_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
+                tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
+                tcp_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
+                tcp_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
             // MEASURE_TIME("http write", {
                 // vofa_tcp.imwrite(cv_image3ch);
 
                 vofa_tcp.imwrite(gray3ch);
                 // http << gray3ch;
             });
+
     }
     return nullptr;
 }

@@ -2,8 +2,8 @@
 // Created by ashkore on 25-2-1.
 //
 
-#ifndef CV_MAIN_H
-#define CV_MAIN_H
+#ifndef MAIN_H
+#define MAIN_H
 
 #include <thread>
 #include <atomic>
@@ -14,24 +14,29 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <pthread.h>
-#include "opencv2/opencv.hpp"
+#include <opencv2/opencv.hpp>
 #include <csignal>
+#include <fcntl.h>
+#include <unistd.h>
+#include <linux/videodev2.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
 
 #include "mytag.h"
 #include "log.h"
 #include "vofa.h"
-
 #include "config.h"
 #include "pwm.h"
-#include <beep.h>
+#include "beep.h"
 #include "PID.h"
-#include <moto.h>
+#include "moto.h"
 #include "servo.h"
 #include "pwm_gtim.h"
-#include <switch.h>
-#include <my_cv2.h>
+#include "switch.h"
+#include "my_cv2.h"
 #include "image_process.h"
 #include "icm20948.h"
+#include "tft180.h"
 
 void element_count(void);
 void element_process(void);
@@ -79,10 +84,11 @@ extern int right_lost_count;
 extern int left_lost_dir;
 extern int right_lost_dir;
 extern int blind_line;
+extern int running_start_time;
 extern int id;
 extern int incision;
 extern int incision_max;
 extern int detect_count_max;
 extern double distance;
 
-#endif //CV_MAIN_H
+#endif //MAIN_H

@@ -7,9 +7,7 @@
 
 #include <cstdint>
 #include <cmath>
-
-typedef float float32;
-typedef uint8_t uint8;
+#include "typedef.h"
 
 typedef struct{
     float32 Kp;

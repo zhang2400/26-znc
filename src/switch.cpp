@@ -4,40 +4,43 @@
 
 #include "switch.h"
 
-GPIO switch_1(GPIO44);
-GPIO switch_2(GPIO45);
+GPIO switch_1(GPIO43);
+GPIO switch_2(GPIO42);
+GPIO switch_3(GPIO44);
+GPIO switch_4(GPIO45);
 
-// 记录上一次的按键状态
-bool last_switch1_state = false;
-bool last_switch2_state = false;
+GPIO dip_switch_1(GPIO20);
+GPIO dip_switch_2(GPIO22);
+GPIO dip_switch_3(GPIO24);
 
 void switch_init()
 {
     switch_1.setDirection("in");
     switch_2.setDirection("in");
+    switch_3.setDirection("in");
+    switch_4.setDirection("in");
+
+    dip_switch_1.setDirection("in");
+    dip_switch_2.setDirection("in");
+    dip_switch_3.setDirection("in");
 }
 
-// 只在按键 **刚刚** 被按下时返回 true（相当于中断触发一次）
-bool switch1() {
-    bool current_state = SWITCH_1;  // 读取当前按键状态
-    if (current_state && !last_switch1_state) {  // 检测从未按下到按下
-        last_switch1_state = true;  // 记录状态
-        return true;  // 触发一次
-    }
-    if (!current_state) {
-        last_switch1_state = false;  // 释放按键时重置状态
-    }
-    return false;  // 其他情况不触发
+int dip_switch(){
+    return DIP_SWITCH;
 }
 
-bool switch2() {
-    bool current_state = SWITCH_2;
-    if (current_state && !last_switch2_state) {
-        last_switch2_state = true;
-        return true;
-    }
-    if (!current_state) {
-        last_switch2_state = false;
-    }
-    return false;
+int switch1() {
+    return SWITCH_1;
+}
+
+int switch2() {
+    return SWITCH_2;
+}
+
+int switch3() {
+    return SWITCH_3;
+}
+
+int switch4() {
+    return SWITCH_4;
 }

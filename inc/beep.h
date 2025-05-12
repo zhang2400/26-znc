@@ -8,10 +8,10 @@
 
 class BEEP{
 public:
-    BEEP(int beepnum);
+    explicit BEEP(int beepnum);
 
-    void beep_on(void);
-    void beep_off(void);
+    void beep_on();
+    void beep_off();
     void beep_ms(int ms);
 private:
     GPIO beep;

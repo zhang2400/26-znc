@@ -7,11 +7,41 @@
 
 #include "GPIO.h"
 
-#define SWITCH_1 !switch_1.readValue();
-#define SWITCH_2 !switch_2.readValue();
+#define DIP_SWITCH_1 (!dip_switch_1.readValue())
+#define DIP_SWITCH_2 (!dip_switch_2.readValue())
+#define DIP_SWITCH_3 (!dip_switch_3.readValue())
+
+#define DIP_SWITCH   ((DIP_SWITCH_1) | (DIP_SWITCH_2) << 1 | (DIP_SWITCH_3) << 2)
+
+#define SWITCH_1 (!switch_1.readValue())
+#define SWITCH_2 (!switch_2.readValue())
+#define SWITCH_3 (!switch_3.readValue())
+#define SWITCH_4 (!switch_4.readValue())
+
+#define KEY_FORWARD SWITCH_1
+#define KEY_UP SWITCH_2
+#define KEY_DOWN SWITCH_3
+#define KEY_BACK SWITCH_4
 
 void switch_init();
-bool switch1();
-bool switch2();
+
+int dip_switch();
+
+int switch1();
+
+int switch2();
+
+int switch3();
+
+int switch4();
+
+extern GPIO switch_1;
+extern GPIO switch_2;
+extern GPIO switch_3;
+extern GPIO switch_4;
+
+extern GPIO dip_switch_1;
+extern GPIO dip_switch_2;
+extern GPIO dip_switch_3;
 
 #endif //SWITCH_H

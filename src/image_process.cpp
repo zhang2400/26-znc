@@ -1367,7 +1367,7 @@ void calculate_contrast_x8(uint8_t *dst_image, const uint8_t *src_image, int16_t
     }
 }
 
-void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
+void tcp_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
     int i = 0;
 
     while (line[i][0] != 0 || line[i][1] != 0) {
@@ -1385,7 +1385,7 @@ void tft180_draw_border_line(cv::Mat& image, int x, int y, const uint8_t line[][
     }
 }
 
-void tft180_draw_real_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
+void tcp_draw_real_border_line(cv::Mat& image, int x, int y, const uint8_t line[][2], cv::Scalar color) {
     int i = incision;
 
     while (i < incision+40 && (line[i][0] != 0 || line[i][1] != 0)) {
@@ -1418,7 +1418,6 @@ void cover_car_head_pers(){
         }
     }
 }
-
 
 void outbounds_detection(void){
     for(int i = 59;i > 0;i--) {
