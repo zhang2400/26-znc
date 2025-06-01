@@ -37,6 +37,7 @@
 #include "image_process.h"
 #include "icm20948.h"
 #include "tft180.h"
+#include "UI.h"
 
 void element_count(void);
 void element_process(void);
@@ -75,6 +76,9 @@ private:
     std::atomic<int> tail;
 };
 
+extern float Kp_max;
+extern float Kd_max;
+extern float CAR_ANGLE_CONVERT;
 extern int lost_x1;
 extern int lost_x2;
 extern int lost_y1;
@@ -91,4 +95,5 @@ extern int incision_max;
 extern int detect_count_max;
 extern double distance;
 
+extern icm20948_data_t icm20948_data;
 #endif //MAIN_H

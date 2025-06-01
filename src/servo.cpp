@@ -4,6 +4,10 @@
 
 #include "servo.h"
 
+float servo_motor_mid = SERVO_MOTOR_MID;
+float servo_motor_l_max = SERVO_MOTOR_L_MAX;
+float servo_motor_r_max = SERVO_MOTOR_R_MAX;
+
 Servo::Servo(int pwm_channel, uint32_t freq_hz, float min_angle, float max_angle, float mid_angle)
     : PWM_GTIM(pwm_channel, 0b11, 2, freq_hz, SERVO_MOTOR_DUTY(mid_angle)),
       min_angle_(min_angle),

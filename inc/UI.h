@@ -22,7 +22,7 @@ typedef volatile int8       vint8;                                              
 typedef volatile int16      vint16;                                             // 易变性修饰 有符号 16 bits
 typedef volatile int32      vint32;                                             // 易变性修饰 有符号 32 bits
 
-typedef double (*UI_func_t)(void);  // 接收 void 返回 double
+typedef double (*UI_func_t)();  // 接收 void 返回 double
 
 typedef enum {
     INT32 = 0,
@@ -53,7 +53,7 @@ typedef union {
 } UI_Var_p;
 
 typedef struct {
-    char name[7];
+    char name[8];
     uint8 type;
     UI_Var_p var_p;
 } UI_item;

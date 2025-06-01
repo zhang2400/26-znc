@@ -139,6 +139,7 @@ void* realtime_task(void* arg) {
     cap.open(0);
     result_image = cv::Mat(60, 80, CV_8UC1);
 
+    UI_init();
     beep.beep_ms(200);
 
     if(ret1 != 0) goto OUT;
@@ -165,7 +166,7 @@ void* realtime_task(void* arg) {
 
             // MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
-            printf("Anglez:%f\n", icm20948_data.anglez);
+            // printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
             // MEASURE_TIME("realtime_task_cost", {
@@ -689,7 +690,7 @@ void *non_realtime_task(void *arg) {
                 // memcpy(gray1ch_image,gray_image, 80 * 60);
                 // memcpy(gray1ch_image, binary_image, 80 * 60);
             // });
-            MEASURE_TIME("detect_time", {
+
                 atag.detect(gray);
             // });
             // MEASURE_TIME("getclosettagindex", {
@@ -719,8 +720,11 @@ void *non_realtime_task(void *arg) {
 
                 vofa_tcp.imwrite(gray3ch);
                 // http << gray3ch;
-            });
 
+    MEASURE_TIME("detect_time", {
+        UI_key_process();
+        UI_show();
+    });
     }
     return nullptr;
 }

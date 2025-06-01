@@ -22,7 +22,7 @@ Flag flag = {
         .found_right_roundabout = false,
         .start = false,
         .stop = false,
-        .icm20602_error = false,
+        .icm20948_error = false,
         .lost_control = false
 };
 //标志位结构体初始化

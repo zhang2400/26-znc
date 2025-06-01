@@ -8,7 +8,7 @@
 #define FONT_HEIGHT 16
 
 char buf[32];
-UI_item items[8][9];
+UI_item items[8][8];
 int8 empty = 0;
 int8 cursor_pos = 0;
 int8 exponent = 0;
@@ -76,7 +76,7 @@ double UI_item_get_value(UI_item *item) {
         case FLOAT:
             return (double) *item->var_p.float_p;
         case FUNC: {
-            UI_func_t func = (UI_func_t)(item->var_p.func_p);
+            auto func = (UI_func_t)(item->var_p.func_p);
             return func();  // 转换后调用
         }
         case CHAR:
@@ -164,11 +164,26 @@ void UI_item_show_value(UI_item *item, uint16 x, uint16 y) {
 
 void UI_init(){
     // 初始化所有的item为EMPTY
-    for(uint8 i = 0; i < 8; i++){
-        for(uint8 j = 0; j < 9; j++){
-            items[i][j].type = EMPTY;
+    for(auto & item : items){
+        for(auto & j : item){
+            j.type = EMPTY;
         }
     }
+    UI_item_init(&items[0][0], "TKp  ", FLOAT, &Kp_max);
+    UI_item_init(&items[0][1], "TKd  ", FLOAT, &Kd_max);
+    UI_item_init(&items[0][3], "Aconv", FLOAT, &CAR_ANGLE_CONVERT);
+    UI_item_init(&items[0][4], "Smid ", FLOAT, &servo_motor_mid);
+    UI_item_init(&items[0][5], "SLeft", FLOAT, &servo_motor_l_max);
+    UI_item_init(&items[0][6], "SRigh", FLOAT, &servo_motor_r_max);
+
+    UI_item_init(&items[1][0], "TKp  ", FLOAT, &Kp_max);
+    UI_item_init(&items[1][1], "TKd  ", FLOAT, &Kd_max);
+    UI_item_init(&items[1][2], "AngZ ", FLOAT, &icm20948_data.anglez);
+    UI_item_init(&items[1][3], "stop ", INT8, &flag.stop);
+    UI_item_init(&items[1][4], "incis", INT32, &incision);
+
+    UI_item_init(&items[5][0], "TKp  ", FLOAT, &Kp_max);
+    UI_item_init(&items[5][1], "TKd  ", FLOAT, &Kd_max);
 }
 
 void UI_show(){
@@ -187,7 +202,7 @@ void UI_show(){
         tft180_set_color(RGB565_GREEN, RGB565_BLACK);
         sprintf(buf, "Page%d       10%+d", dip_switch, exponent);
         tft180_show_string(0, 0, buf);
-        for (uint8 i = 0; i < 9; i++) {
+        for (uint8 i = 0; i < 8; i++) {
             tft180_show_char(0, FONT_HEIGHT * i + FONT_HEIGHT, '|');
         }
 
@@ -207,31 +222,38 @@ void UI_show(){
             break;
             default: ;
         }
+
         // 显示名字
-        for(uint8 i = 0; i < 9; i++){
+        for(uint8 i = 0; i < 8; i++){
             UI_item_show_name(&items[dip_switch][i], FONT_WEIGHT, FONT_HEIGHT * i + FONT_HEIGHT);
         }
     }
 
-    //显示值
-    for(uint8 i = 0; i < 9; i++){
-        UI_item_show_value(&items[dip_switch][i], FONT_WEIGHT * 6, FONT_HEIGHT * i + FONT_HEIGHT);
-    }
+    // 显示值
+     for(uint8 i = 0; i < 8; i++){
+         UI_item_show_value(&items[dip_switch][i], FONT_WEIGHT * 6, FONT_HEIGHT * i + FONT_HEIGHT);
+     }
 
     // 显示自定义部分
-    UI_show_custom_part();
+    // UI_show_custom_part();
+
+    // 陀螺仪异常刷新屏幕
+    if (flag.icm20948_error) {
+        tft180_clear();
+        flag.icm20948_error  = false;
+    }
 
 }
 
 void UI_show_custom_part(){
-    if(counter.save_flash_led > 0){
-        tft180_set_color(RGB565_GREEN, RGB565_BLACK);
-        tft180_show_string(48, 0, "Saved");
-    }
-    if(counter.read_flash_led > 0){
-        tft180_set_color(RGB565_GREEN, RGB565_BLACK);
-        tft180_show_string(44, 0, "Readed");
-    }
+    // if(counter.save_flash_led > 0){
+    //     tft180_set_color(RGB565_GREEN, RGB565_BLACK);
+    //     tft180_show_string(48, 0, "Saved");
+    // }
+    // if(counter.read_flash_led > 0){
+    //     tft180_set_color(RGB565_GREEN, RGB565_BLACK);
+    //     tft180_show_string(44, 0, "Readed");
+    // }
     // switch (DIP_SWITCH){
     //     case 4:
     //         if(perspective){
@@ -335,10 +357,10 @@ void UI_key_process(){
         key_pressed = 1;
         switch (ui_state) {
             case 0:
-                cursor_pos = (cursor_pos + 8) % 9;
+                cursor_pos = (cursor_pos + 7) % 8;
                 break;
             case 1:
-                UI_item_set_value(item, UI_item_get_value(item) + pow(10, exponent));
+                // UI_item_set_value(item, UI_item_get_value(item) + pow(10, exponent));
                 break;
             case 2:
                 if(exponent < 7) exponent++;
@@ -361,10 +383,10 @@ void UI_key_process(){
         key_pressed = 1;
         switch (ui_state) {
             case 0:
-                // cursor_pos = (cursor_pos + 1) % 9;
+                cursor_pos = (cursor_pos + 1) % 8;
                 break;
             case 1:
-                UI_item_set_value(item, UI_item_get_value(item) - pow(10, exponent));
+                // UI_item_set_value(item, UI_item_get_value(item) - pow(10, exponent));
                 break;
             case 2:
                 if(exponent > -7) exponent--;
@@ -384,6 +406,7 @@ void UI_key_process(){
         key_pressed = 1;
         flag.start = true;
         // running_start_time = system_getval_ms();
+        counter.beep_ms = 300;
     } else if(!KEY_BACK && key_back_pressed){
         key_back_pressed = 0;
     }

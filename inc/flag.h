@@ -38,7 +38,7 @@ typedef struct{
     int8_t right_B_higher_than_C;  // 右拐角B点高于C点标志，环岛需要使用这个更严格的条件
     int8_t start;
     int8_t stop;  // 强制停车标志
-    int8_t icm20602_error;  // 陀螺仪错误标志
+    int8_t icm20948_error;  // 陀螺仪错误标志
     int8_t lost_control;  // 失控标志
     int8_t image_preprocess_method;  // 图像预处理方法
     int8_t crossroad_By_diff;  // 十字路口B点差值

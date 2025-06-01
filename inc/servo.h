@@ -29,4 +29,8 @@ private:
 
 };
 
+extern float servo_motor_mid;
+extern float servo_motor_l_max;
+extern float servo_motor_r_max;
+
 #endif //SERVO_H
