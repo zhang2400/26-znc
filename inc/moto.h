@@ -9,6 +9,7 @@
 #include <encoder.h>
 #include "GPIO.h"
 #include "config.h"
+#include "typedef.h"
 
 class Moto {
 public:
@@ -16,8 +17,8 @@ public:
     ~Moto();
     void set_speed(int duty);
     void update_speed();
-    int speed;
-    int last_speed;
+    int32 speed;
+    int32 last_speed;
 private:
     bool inverse;
     PWM motor;

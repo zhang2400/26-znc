@@ -12,6 +12,7 @@
 #include "flag.h"
 #include "image_process.h"
 #include "GPIO.h"
+#include "main.h"
 #include "tft180.h"
 
 typedef signed char         int8;                                               // ÓÐ·ûºÅ  8 bits

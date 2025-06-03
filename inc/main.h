@@ -95,5 +95,8 @@ extern int incision_max;
 extern int detect_count_max;
 extern double distance;
 
+
+extern Moto Moto_L;
+extern Moto Moto_R;
 extern icm20948_data_t icm20948_data;
 #endif //MAIN_H

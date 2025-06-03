@@ -22,7 +22,12 @@
 #include <cstring>
 
 enum GPIO_pin {
+    GPIO13 = 13,
+    GPIO14 = 14,
+    GPIO15 = 15,
+    GPIO16 = 16,
     GPIO20 = 20,
+    GPIO21 = 21,
     GPIO22 = 22,
     GPIO24 = 24,
     GPIO41 = 41,

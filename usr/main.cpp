@@ -61,7 +61,7 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("192.168.5.72", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int incision = 0;
@@ -166,7 +166,7 @@ void* realtime_task(void* arg) {
 
             // MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
-            // printf("Anglez:%f\n", icm20948_data.anglez);
+            printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
             // MEASURE_TIME("realtime_task_cost", {
@@ -278,8 +278,8 @@ void* realtime_task(void* arg) {
             }
 
             Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
-            MEASURE_TIME("realtime_task_cost", {
-            // vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
+            // MEASURE_TIME("realtime_task_cost", {
+            vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
             // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d\n",max_white_column.left_x,max_white_column.right_x,max_white_column.start_y,max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0],counter.drive_in_ramp, flag.found_ramp);
             // vofa_udp.printf("%d,%d,%d\n",abs(max_white_column.left_x - max_white_column.right_x),max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0]);
@@ -292,7 +292,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%.2f,%d,%d\n",id,left_lost_count,right_lost_count,distance,flag.found_left_roundabout,flag.found_right_roundabout);
             // vofa_udp.printf("%f,%f,%d,%d,%.2f,%.2f\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout);
-            vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.1f\n",image_diff,id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.1f\n",image_diff,id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
             // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,c  ounter.found_garage, garage_count,detect_count_max);
@@ -306,7 +306,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%.2f,%.2f,%.2f\n",flag.stop,speed_setpoint,left_speed_setpoint,right_speed_setpoint);
             // vofa_udp.printf("diff:%d,cnt:%d,kp:%.2f,kd:%.2f,ang:%.2f\n",image_diff,counter.drive_in_left_roundabout,wheel_turn_pid.Kp,wheel_turn_pid.Kd,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
-            });
+            // });
             // 速度环PID
 
             if (flag.stop == false) {
@@ -720,11 +720,12 @@ void *non_realtime_task(void *arg) {
 
                 vofa_tcp.imwrite(gray3ch);
                 // http << gray3ch;
-
-    MEASURE_TIME("detect_time", {
-        UI_key_process();
-        UI_show();
-    });
+        // if (Moto_L.speed < 10 && Moto_R.speed < 10 && flag.start) {
+            MEASURE_TIME("UI_time", {
+                UI_key_process();
+                UI_show();
+            });
+        // }
     }
     return nullptr;
 }

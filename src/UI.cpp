@@ -179,8 +179,11 @@ void UI_init(){
     UI_item_init(&items[1][0], "TKp  ", FLOAT, &Kp_max);
     UI_item_init(&items[1][1], "TKd  ", FLOAT, &Kd_max);
     UI_item_init(&items[1][2], "AngZ ", FLOAT, &icm20948_data.anglez);
-    UI_item_init(&items[1][3], "stop ", INT8, &flag.stop);
-    UI_item_init(&items[1][4], "incis", INT32, &incision);
+    UI_item_init(&items[1][3], "start", INT8, &flag.start);
+    UI_item_init(&items[1][4], "stop ", INT8, &flag.stop);
+    UI_item_init(&items[1][5], "incis", INT32, &incision);
+    UI_item_init(&items[1][6], "speed_L", INT32, &Moto_L.speed);
+    UI_item_init(&items[1][7], "speed_R", INT32, &Moto_R.speed);
 
     UI_item_init(&items[5][0], "TKp  ", FLOAT, &Kp_max);
     UI_item_init(&items[5][1], "TKd  ", FLOAT, &Kd_max);
@@ -360,7 +363,7 @@ void UI_key_process(){
                 cursor_pos = (cursor_pos + 7) % 8;
                 break;
             case 1:
-                // UI_item_set_value(item, UI_item_get_value(item) + pow(10, exponent));
+                UI_item_set_value(item, UI_item_get_value(item) + pow(10, exponent));
                 break;
             case 2:
                 if(exponent < 7) exponent++;
@@ -386,7 +389,7 @@ void UI_key_process(){
                 cursor_pos = (cursor_pos + 1) % 8;
                 break;
             case 1:
-                // UI_item_set_value(item, UI_item_get_value(item) - pow(10, exponent));
+                UI_item_set_value(item, UI_item_get_value(item) - pow(10, exponent));
                 break;
             case 2:
                 if(exponent > -7) exponent--;
@@ -404,7 +407,7 @@ void UI_key_process(){
     if(KEY_BACK && !key_back_pressed){
         key_back_pressed = 1;
         key_pressed = 1;
-        flag.start = true;
+        flag.start = !flag.start;
         // running_start_time = system_getval_ms();
         counter.beep_ms = 300;
     } else if(!KEY_BACK && key_back_pressed){
