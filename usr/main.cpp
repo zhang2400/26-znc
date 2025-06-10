@@ -82,6 +82,8 @@ BEEP beep(GPIO61);
 Moto Moto_R(PWM1_GPIO65, 75, PWM0_GPIO64, 73, true);
 Moto Moto_L(PWM2_GPIO66, 74, PWM3_GPIO67, 72, false);
 
+Servo_Gtim Servo(SERVO_MOTOR_CHIP, SERVO_MOTOR_NUM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
+
 #define max_white_column_height 45
 #define min_white_column_height 35
 
@@ -94,14 +96,25 @@ void* realtime_task(void* arg) {
     left_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
 
-    Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
+    // Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
+    // Gtim1.initialize();
+    // Gtim1.disable();
+    //
+    // Gtim1.set_frequency(500);
+    // Gtim1.set_duty(5000);
+    // Gtim1.enable();
+
+    // int period = Gtim1.readPeriod();
+    // int duty = Gtim1.readDutyCycle();
+    //
+    // printf("\nperiod:%d duty:%d\n", period, duty);
 
     switch_init();
 
     tft180_init("/dev/fb0");
 
-    ret1 = icm20948_i2c_bus_init(icm20948, "/dev/i2c-1", 0x68);
-    ret2 = icm20948_configure(icm20948, ACCE_FS_8G, GYRO_FS_2000DPS);
+    // ret1 = icm20948_i2c_bus_init(icm20948, "/dev/i2c-1", 0x68);
+    // ret2 = icm20948_configure(icm20948, ACCE_FS_8G, GYRO_FS_2000DPS);
 
     InitLookupTable();
 
@@ -165,7 +178,7 @@ void* realtime_task(void* arg) {
             }
 
             // MEASURE_TIME("realtime_task_cost", {
-            icm20948_get_anglez(icm20948, 0.01f);
+            // icm20948_get_anglez(icm20948, 0.01f);
             printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
@@ -277,7 +290,7 @@ void* realtime_task(void* arg) {
                 right_speed_setpoint -= diff;
             }
 
-            Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
+            // Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
             // MEASURE_TIME("realtime_task_cost", {
             vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
             // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);

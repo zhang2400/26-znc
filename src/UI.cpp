@@ -172,9 +172,9 @@ void UI_init(){
     UI_item_init(&items[0][0], "TKp  ", FLOAT, &Kp_max);
     UI_item_init(&items[0][1], "TKd  ", FLOAT, &Kd_max);
     UI_item_init(&items[0][3], "Aconv", FLOAT, &CAR_ANGLE_CONVERT);
-    UI_item_init(&items[0][4], "Smid ", FLOAT, &servo_motor_mid);
-    UI_item_init(&items[0][5], "SLeft", FLOAT, &servo_motor_l_max);
-    UI_item_init(&items[0][6], "SRigh", FLOAT, &servo_motor_r_max);
+    // UI_item_init(&items[0][4], "Smid ", FLOAT, &servo_motor_mid);
+    // UI_item_init(&items[0][5], "SLeft", FLOAT, &servo_motor_l_max);
+    // UI_item_init(&items[0][6], "SRigh", FLOAT, &servo_motor_r_max);
 
     UI_item_init(&items[1][0], "TKp  ", FLOAT, &Kp_max);
     UI_item_init(&items[1][1], "TKd  ", FLOAT, &Kd_max);

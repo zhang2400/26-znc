@@ -30,7 +30,6 @@
 #include "beep.h"
 #include "PID.h"
 #include "moto.h"
-#include "servo.h"
 #include "pwm_gtim.h"
 #include "switch.h"
 #include "my_cv2.h"
@@ -38,6 +37,7 @@
 #include "icm20948.h"
 #include "tft180.h"
 #include "UI.h"
+#include "servo_gtim.h"
 
 void element_count(void);
 void element_process(void);

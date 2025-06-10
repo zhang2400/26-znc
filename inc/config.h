@@ -53,8 +53,9 @@ extern "C" {
 #define SERVO_MOTOR_L_MAX           (SERVO_MOTOR_MID - 15)
 #define SERVO_MOTOR_R_MAX           (SERVO_MOTOR_MID + 15)
 
-#define SERVO_MOTOR_PWM             (GTIM1_GPIO88)
-#define SERVO_MOTOR_FREQ            (150)
+#define SERVO_MOTOR_CHIP            (4)
+#define SERVO_MOTOR_NUM             (1)
+#define SERVO_MOTOR_FREQ            (50)
 
 #define WHEEL_MAX_DUTY              (6000)
 
