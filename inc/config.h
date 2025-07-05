@@ -57,7 +57,16 @@ extern "C" {
 #define SERVO_MOTOR_NUM             (1)
 #define SERVO_MOTOR_FREQ            (50)
 
-#define WHEEL_MAX_DUTY              (6000)
+
+#define BLDC_CHIP                   (8)
+#define BLDC_NUM                    (6)
+#define BLDC_FREQ                   (50)
+#define BLDC_PERIOD                 ((float)1.0 / ((float)SERVO_MOTOR_FREQ / 1000))
+#define BLDC_DUTY_MIN               ((float)1.0 / (float)BLDC_PERIOD * (float)PWM_DUTY_MAX)
+#define BLDC_DUTY_MAX               ((float)2.0 / (float)BLDC_PERIOD * (float)PWM_DUTY_MAX)
+#define BLDC_DUTY                   ((float)1.8 / (float)BLDC_PERIOD * (float)PWM_DUTY_MAX)
+
+#define WHEEL_MAX_DUTY              (4000)
 
 #ifdef __cplusplus
 }

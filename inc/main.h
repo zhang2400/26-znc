@@ -76,6 +76,13 @@ private:
     std::atomic<int> tail;
 };
 
+extern float left_wheel_pidout;
+extern float right_wheel_pidout;
+extern float speed_base;
+extern float boost_ratio;
+extern float speed_setpoint;
+extern float left_speed_setpoint;
+extern float right_speed_setpoint;
 extern float Kp_max;
 extern float Kd_max;
 extern float CAR_ANGLE_CONVERT;
@@ -95,7 +102,8 @@ extern int incision_max;
 extern int detect_count_max;
 extern double distance;
 
-
+extern PID_Incremental left_wheel_speed_pid;
+extern PID_Incremental right_wheel_speed_pid;
 extern Moto Moto_L;
 extern Moto Moto_R;
 extern icm20948_data_t icm20948_data;

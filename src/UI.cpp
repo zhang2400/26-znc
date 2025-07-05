@@ -171,7 +171,11 @@ void UI_init(){
     }
     UI_item_init(&items[0][0], "TKp  ", FLOAT, &Kp_max);
     UI_item_init(&items[0][1], "TKd  ", FLOAT, &Kd_max);
-    UI_item_init(&items[0][3], "Aconv", FLOAT, &CAR_ANGLE_CONVERT);
+    UI_item_init(&items[0][2], "Aconv", FLOAT, &CAR_ANGLE_CONVERT);
+    UI_item_init(&items[0][3], "spd_L", INT32, &Moto_L.speed);
+    UI_item_init(&items[0][4], "spd_R", INT32, &Moto_R.speed);
+    UI_item_init(&items[0][5], "start", INT8, &flag.start);
+    UI_item_init(&items[0][6], "stop ", INT8, &flag.stop);
     // UI_item_init(&items[0][4], "Smid ", FLOAT, &servo_motor_mid);
     // UI_item_init(&items[0][5], "SLeft", FLOAT, &servo_motor_l_max);
     // UI_item_init(&items[0][6], "SRigh", FLOAT, &servo_motor_r_max);
@@ -184,6 +188,24 @@ void UI_init(){
     UI_item_init(&items[1][5], "incis", INT32, &incision);
     UI_item_init(&items[1][6], "speed_L", INT32, &Moto_L.speed);
     UI_item_init(&items[1][7], "speed_R", INT32, &Moto_R.speed);
+
+    UI_item_init(&items[4][0], "SPD_L", INT32, &Moto_L.speed);
+    UI_item_init(&items[4][1], "SPD_R", INT32, &Moto_R.speed);
+    UI_item_init(&items[4][2], "SPD_BA", FLOAT, &speed_base);
+    UI_item_init(&items[4][3], "SPD_SET", FLOAT, &speed_setpoint);
+    UI_item_init(&items[4][4], "LSP_SP", FLOAT, &left_speed_setpoint);
+    UI_item_init(&items[4][5], "RSP_SP", FLOAT, &right_speed_setpoint);
+    UI_item_init(&items[4][6], "LSP_O", FLOAT, &left_wheel_pidout);
+    UI_item_init(&items[4][7], "RSP_O", FLOAT, &right_wheel_pidout);
+
+    UI_item_init(&items[6][0], "SPD_L", INT32, &Moto_L.speed);
+    UI_item_init(&items[6][1], "SPD_R", INT32, &Moto_R.speed);
+    UI_item_init(&items[6][2], "LSP_Kp", FLOAT, &speed_base);
+    UI_item_init(&items[6][3], "LSP_Ki", FLOAT, &speed_setpoint);
+    UI_item_init(&items[6][4], "LSP_KD", FLOAT, &left_speed_setpoint);
+    UI_item_init(&items[6][5], "STOP", INT8, &flag.stop);
+    UI_item_init(&items[6][6], "LSP_O", FLOAT, &left_wheel_pidout);
+    UI_item_init(&items[6][7], "RSP_O", FLOAT, &right_wheel_pidout);
 
     UI_item_init(&items[5][0], "TKp  ", FLOAT, &Kp_max);
     UI_item_init(&items[5][1], "TKd  ", FLOAT, &Kd_max);

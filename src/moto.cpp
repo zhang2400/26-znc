@@ -39,13 +39,14 @@ void Moto::set_speed(int duty)
         direction.setValue(true);
         duty = -duty;
     }
+    printf("\ndir:%d",direction.readValue());
     motor.set_duty(duty);
 }
 
 void Moto::update_speed()
 {
     const double _speed = (inverse) ? encoder.pulse_counter_update() : -encoder.pulse_counter_update();
-    constexpr double factor = 0.7;
+    constexpr double factor = 0.5;
     speed = static_cast<int>(factor * _speed + (1 - factor) * last_speed);
     last_speed = speed;
 }

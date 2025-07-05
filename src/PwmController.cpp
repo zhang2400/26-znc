@@ -81,12 +81,13 @@ bool PwmController::writeToFile(const std::string& path, const std::string& valu
 void PwmController::set_frequency(uint32_t freq_hz) {
     if (freq_hz == 0) return;
     period = (float)1'000'000'000 / (float)freq_hz; // 转换为ns
-    printf("\nns:%d\n", period);
+    // printf("\nns:%d\n", period);
     setPeriod(period);
 }
 
 void PwmController::set_duty(uint32_t duty) {
     if (duty > PWM_DUTY_MAX) duty = PWM_DUTY_MAX;
     duty_cycle = period / PWM_DUTY_MAX * (PWM_DUTY_MAX - (float)duty);
+    // printf("per:%d\r\nduty:%d\r\n", period, duty_cycle);
     setDutyCycle(duty_cycle);
 }

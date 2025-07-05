@@ -1,5 +1,7 @@
 #include "main.h"
 
+#include <bldc.h>
+
 float CAR_ANGLE_CONVERT = 3.0f;
 
 // PID相关变量
@@ -12,7 +14,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 70;
+float speed_base = 150;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -71,7 +73,7 @@ int detect_count_max = 0;
 int blind_line;
 int protect = true;
 
-int i = SERVO_MOTOR_MID;
+int cnt = 0;
 int j = 0;
 int running_time = 16500;
 int running_start_time = 0;
@@ -79,10 +81,12 @@ int delay_time = running_time;
 int stop_in_garage = true;
 
 BEEP beep(GPIO61);
-Moto Moto_R(PWM1_GPIO65, 75, PWM0_GPIO64, 73, true);
-Moto Moto_L(PWM2_GPIO66, 74, PWM3_GPIO67, 72, false);
+Moto Moto_R(PWM2_GPIO66, 74, PWM0_GPIO64, 73, true);
+Moto Moto_L(PWM1_GPIO65, 75, PWM3_GPIO67, 72, false);
 
 Servo_Gtim Servo(SERVO_MOTOR_CHIP, SERVO_MOTOR_NUM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
+BLDC BLDC(BLDC_CHIP, BLDC_NUM, BLDC_FREQ, BLDC_DUTY_MAX, BLDC_DUTY_MIN);
+// Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 
 #define max_white_column_height 45
 #define min_white_column_height 35
@@ -96,17 +100,14 @@ void* realtime_task(void* arg) {
     left_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
 
-    // Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
-    // Gtim1.initialize();
-    // Gtim1.disable();
+    // Atim1.initialize();
+    // Atim1.disable();
     //
-    // Gtim1.set_frequency(500);
-    // Gtim1.set_duty(5000);
-    // Gtim1.enable();
-
-    // int period = Gtim1.readPeriod();
-    // int duty = Gtim1.readDutyCycle();
-    //
+    // Atim1.set_frequency(50);
+    // Atim1.set_duty(5000);
+    // Atim1.enable();
+    // int period = Atim1.readPeriod();
+    // int duty = Atim1.readDutyCycle();
     // printf("\nperiod:%d duty:%d\n", period, duty);
 
     switch_init();
@@ -179,16 +180,16 @@ void* realtime_task(void* arg) {
 
             // MEASURE_TIME("realtime_task_cost", {
             // icm20948_get_anglez(icm20948, 0.01f);
-            printf("Anglez:%f\n", icm20948_data.anglez);
+            // printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
-            // MEASURE_TIME("realtime_task_cost", {
+
             // 图像处理
             cap >> frame;
-                // printf("frame size: %d %d\n", frame.cols, frame.rows);
-            // });
+            // printf("frame size: %d %d\n", frame.cols, frame.rows);
             // vofa_tcp.imwrite(frame);
             frame.copyTo(myframe);
+            cv::flip(myframe, myframe, 0); // 上下翻转
             memcpy(LQU_CAM_image, myframe.data, 320 * 240);
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
@@ -291,6 +292,8 @@ void* realtime_task(void* arg) {
             }
 
             // Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
+            // Servo.set_duty(3000);
+            BLDC.set_bldc_duty(800);
             // MEASURE_TIME("realtime_task_cost", {
             vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
             // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);
@@ -339,11 +342,14 @@ void* realtime_task(void* arg) {
                 left_speed_setpoint = 0;
                 right_speed_setpoint = 0;
             }
-            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
-            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
+            // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
+            // right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
 
-            Moto_L.set_speed((int)left_wheel_pidout);
-            Moto_R.set_speed((int)right_wheel_pidout);
+            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, speed_base);
+            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, speed_base);
+
+            Moto_L.set_speed(-(int)left_wheel_pidout);
+            Moto_R.set_speed(-(int)right_wheel_pidout);
 
             image_diff_process();
 
@@ -734,10 +740,10 @@ void *non_realtime_task(void *arg) {
                 vofa_tcp.imwrite(gray3ch);
                 // http << gray3ch;
         // if (Moto_L.speed < 10 && Moto_R.speed < 10 && flag.start) {
-            MEASURE_TIME("UI_time", {
+            // MEASURE_TIME("UI_time", {
                 UI_key_process();
                 UI_show();
-            });
+            // });
         // }
     }
     return nullptr;
