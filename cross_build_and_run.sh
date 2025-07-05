@@ -32,6 +32,11 @@ build_name=$(grep "set(EXECUTABLE" < CMakeLists.txt | cut -d ")" -f 1 | cut -d "
 cp "$BUILD_DIR/$build_name" .
 
 # 上传到开发板并运行
+echo "Running :ssh $username@$ip sudo pkill cv"
+ssh -t $username@$ip "sudo pkill cv"
+sleep 0.5
+echo "Running :ssh $username@$ip sudo rm cv"
+ssh -t $username@$ip "sudo rm cv"
 echo "Uploading :scp $build_name $username@$ip:/home/$username"
 scp -O $build_name $username@$ip:/home/$username
 echo "Running :ssh $username@$ip ./$build_name"
