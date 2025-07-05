@@ -10,6 +10,33 @@
 # sudo systemctl enable cv-monitor.service
 # sudo systemctl start cv-monitor.service
 
+log_kmsg() {
+    echo "<6>${LOG_TAG} $1" > /dev/kmsg
+}
+
+unbind_fb_console() {
+    for i in /sys/class/vtconsole/vtcon*; do
+        name=$(cat "$i/name")
+        if echo "$name" | grep -iq "frame buffer"; then
+            echo 0 > "$i/bind"
+        fi
+    done
+}
+
+sleep 10
+
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
+log_kmsg "Ready"
 
 GPIO_NUM=16
 PROCESS_NAME="cv"
@@ -24,18 +51,8 @@ if [ ! -e "$GPIO_PATH" ]; then
     echo "in" > "$GPIO_DIR"
 fi
 
-log_kmsg() {
-    echo "<6>${LOG_TAG} $1" > /dev/kmsg
-}
-
-
+unbind_fb_console
 while true; do
-    # 检查进程是否存在
-    if ! pgrep -x "$PROCESS_NAME" > /dev/null; then
-        log_kmsg "$PROCESS_NAME not running, starting..."
-        "$PROCESS_PATH" >/dev/null 2>&1 &
-        sleep 1
-    fi
 
     # 检查GPIO是否为低电平
     if [ "$(cat "$GPIO_PATH")" = "0" ]; then
