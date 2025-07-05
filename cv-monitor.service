@@ -1,0 +1,12 @@
+[Unit]
+Description=CV Monitor Daemon (Shell)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/loongson/cv-monitor.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
