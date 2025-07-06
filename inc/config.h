@@ -67,7 +67,8 @@ extern "C" {
 
 
     // 定义驱动路劲，该路劲由设备树生成
-#define SERVO_MOTOR1_PWM            "/dev/zf_device_pwm_esc_1"
+#define SERVO_MOTOR_PWM            "/dev/zf_device_pwm_esc_1"
+#define BLDC_MOTOR_PWM              "/dev/zf_device_pwm_servo"
 
     // 定义主板上舵机频率  请务必注意范围 50-300
     // 如果要修改，需要直接修改设备树。
@@ -76,7 +77,7 @@ extern "C" {
     // 在设备树中，默认设置的10000。如果要修改，需要直接修改设备树。
 #define PWM_DUTY_MAX                (10000)
 
-#define WHEEL_MAX_DUTY              (4000)
+#define WHEEL_MAX_DUTY              (6000)
 
 #ifdef __cplusplus
 }

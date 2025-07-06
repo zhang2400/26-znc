@@ -39,7 +39,7 @@ void Moto::set_speed(int duty)
         direction.setValue(true);
         duty = -duty;
     }
-    printf("\ndir:%d",direction.readValue());
+    // printf("\ndir:%d",direction.readValue());
     motor.set_duty(duty);
 }
 

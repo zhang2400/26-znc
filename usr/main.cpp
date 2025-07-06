@@ -82,8 +82,8 @@ BEEP beep(GPIO61);
 Moto Moto_R(PWM2_GPIO66, 74, PWM0_GPIO64, 73, true);
 Moto Moto_L(PWM1_GPIO65, 75, PWM3_GPIO67, 72, false);
 
+// 获取PWM驱动信息
 struct pwm_info servo_pwm_info;
-// Servo_Gtim Servo(SERVO_MOTOR_CHIP, SERVO_MOTOR_NUM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 // BLDC BLDC(BLDC_CHIP, BLDC_NUM, BLDC_FREQ, BLDC_DUTY_MAX, BLDC_DUTY_MIN);
 // Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 
@@ -98,16 +98,6 @@ void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
     left_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
     right_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
-
-    // Atim1.initialize();
-    // Atim1.disable();
-    //
-    // Atim1.set_frequency(50);
-    // Atim1.set_duty(5000);
-    // Atim1.enable();
-    // int period = Atim1.readPeriod();
-    // int duty = Atim1.readDutyCycle();
-    // printf("\nperiod:%d duty:%d\n", period, duty);
 
     switch_init();
 
@@ -151,7 +141,7 @@ void* realtime_task(void* arg) {
     cap.set(cv::CAP_PROP_FPS, 120);
     cap.open(0);
     result_image = cv::Mat(60, 80, CV_8UC1);
-    pwm_get_dev_info(SERVO_MOTOR1_PWM, &servo_pwm_info);
+    pwm_get_dev_info(SERVO_MOTOR_PWM, &servo_pwm_info);
 
     UI_init();
     beep.beep_ms(200);
@@ -292,7 +282,9 @@ void* realtime_task(void* arg) {
             }
 
             // Servo.set_duty(3000);
-            pwm_set_duty(SERVO_MOTOR1_PWM, (uint16)SERVO_MOTOR_DUTY(SERVO_MOTOR_MID - turn_angle));
+            pwm_set_duty(SERVO_MOTOR_PWM, (uint16)SERVO_MOTOR_DUTY(SERVO_MOTOR_MID - turn_angle));
+            pwm_set_duty(BLDC_MOTOR_PWM, (uint16)BLDC_DUTY);
+
             // BLDC.set_bldc_duty(800);
             // MEASURE_TIME("realtime_task_cost", {
             vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);

@@ -42,7 +42,7 @@ void PWM::set_frequency(uint32_t freq_hz) {
 void PWM::set_duty(uint32_t duty) {
     if (duty > PWM_DUTY_MAX) duty = PWM_DUTY_MAX;
     duty_ns = period_ns / PWM_DUTY_MAX * (float)duty;
-    printf("\nns:%.3f duty:%d\n", period_ns,duty);
+    // printf("\nns:%.3f duty:%d\n", period_ns,duty);
     update_duty();
 }
 
