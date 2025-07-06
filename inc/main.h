@@ -30,14 +30,13 @@
 #include "beep.h"
 #include "PID.h"
 #include "moto.h"
-#include "pwm_gtim.h"
 #include "switch.h"
+#include "servo.h"
 #include "my_cv2.h"
 #include "image_process.h"
 #include "icm20948.h"
 #include "tft180.h"
 #include "UI.h"
-#include "servo_gtim.h"
 #include <bldc.h>
 #include <zf_driver_pwm.h>
 

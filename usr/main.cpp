@@ -84,8 +84,6 @@ Moto Moto_L(PWM1_GPIO65, 75, PWM3_GPIO67, 72, false);
 
 // 获取PWM驱动信息
 struct pwm_info servo_pwm_info;
-// BLDC BLDC(BLDC_CHIP, BLDC_NUM, BLDC_FREQ, BLDC_DUTY_MAX, BLDC_DUTY_MIN);
-// Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 
 #define max_white_column_height 45
 #define min_white_column_height 35
@@ -282,8 +280,10 @@ void* realtime_task(void* arg) {
             }
 
             // Servo.set_duty(3000);
-            pwm_set_duty(SERVO_MOTOR_PWM, (uint16)SERVO_MOTOR_DUTY(SERVO_MOTOR_MID - turn_angle));
-            pwm_set_duty(BLDC_MOTOR_PWM, (uint16)BLDC_DUTY);
+            // pwm_set_duty(SERVO_MOTOR_PWM, (uint16)SERVO_MOTOR_DUTY(SERVO_MOTOR_MID - turn_angle));
+            // pwm_set_duty(BLDC_MOTOR_PWM, (uint16)BLDC_DUTY);
+            servo_set_angle(SERVO_MOTOR_MID);
+            bldc_set_duty(BLDC_DUTY);
 
             // BLDC.set_bldc_duty(800);
             // MEASURE_TIME("realtime_task_cost", {
