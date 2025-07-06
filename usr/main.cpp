@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 150;
+float speed_base = 180;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -73,7 +73,9 @@ int protect = true;
 
 int cnt = 0;
 int j = 0;
-int running_time = 16500;
+// int running_time = 16500;
+int running_time = 650;
+
 int running_start_time = 0;
 int delay_time = running_time;
 int stop_in_garage = true;
@@ -94,15 +96,15 @@ double distance = -1;
 
 void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
-    left_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
-    right_wheel_speed_pid = PID_Incremental_Init(40, 6, 0, 6000, -6000, false, 0.25f);
+    left_wheel_speed_pid = PID_Incremental_Init(30, 6, 2, 6000, -6000, false, 0.25f);
+    right_wheel_speed_pid = PID_Incremental_Init(30, 6, 2, 6000, -6000, false, 0.25f);
 
     switch_init();
 
     tft180_init("/dev/fb0");
 
-    // ret1 = icm20948_i2c_bus_init(icm20948, "/dev/i2c-1", 0x68);
-    // ret2 = icm20948_configure(icm20948, ACCE_FS_8G, GYRO_FS_2000DPS);
+    ret1 = icm20948_i2c_bus_init(icm20948, "/dev/i2c-1", 0x68);
+    ret2 = icm20948_configure(icm20948, ACCE_FS_8G, GYRO_FS_2000DPS);
 
     InitLookupTable();
 
@@ -167,17 +169,18 @@ void* realtime_task(void* arg) {
             }
 
             // MEASURE_TIME("realtime_task_cost", {
-            // icm20948_get_anglez(icm20948, 0.01f);
-            // printf("Anglez:%f\n", icm20948_data.anglez);
+            icm20948_get_anglez(icm20948, 0.01f);
+            printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
 
             // 图像处理
+            // MEASURE_TIME("realtime_task_cost", {
             cap >> frame;
-            // printf("frame size: %d %d\n", frame.cols, frame.rows);
-            // vofa_tcp.imwrite(frame);
             frame.copyTo(myframe);
-            cv::flip(myframe, myframe, 0); // 上下翻转
+
+            cv::flip(myframe, myframe, -1); // 上下翻转
+
             memcpy(LQU_CAM_image, myframe.data, 320 * 240);
             cv::resize(myframe, myframe, cv::Size(80,60));
             memcpy(gray_image, myframe.data, 80 * 60);
@@ -226,11 +229,8 @@ void* realtime_task(void* arg) {
 
             detect_count_max = get_border_line(80);
             outbounds_detection();
+
             // });
-            // vofa_tcp.imwrite((uint8_t *)contrast_image, 80, 60);
-
-            // vofa_udp.printf("L_pid:%f,%f,%d,%d\n",left_speed_setpoint, right_speed_setpoint, Moto_L.speed, Moto_R.speed);
-
             // 动态Kp，Kd
             // if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
             //     (flag.need_sec_border && flag.left_sec_border && flag.left_border)){
@@ -282,7 +282,7 @@ void* realtime_task(void* arg) {
             // Servo.set_duty(3000);
             // pwm_set_duty(SERVO_MOTOR_PWM, (uint16)SERVO_MOTOR_DUTY(SERVO_MOTOR_MID - turn_angle));
             // pwm_set_duty(BLDC_MOTOR_PWM, (uint16)BLDC_DUTY);
-            servo_set_angle(SERVO_MOTOR_MID);
+            servo_set_angle(SERVO_MOTOR_MID - turn_angle);
             bldc_set_duty(BLDC_DUTY);
 
             // BLDC.set_bldc_duty(800);
@@ -319,7 +319,7 @@ void* realtime_task(void* arg) {
 
             if (flag.stop == false) {
                 if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
-                    speed_setpoint = 60;
+                    speed_setpoint = 120;
                 }else {
                     if(max_white_column.left_height > max_white_column_height) {
                         speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column_height - max_white_column_height) / 3.3)));
@@ -330,6 +330,7 @@ void* realtime_task(void* arg) {
             }
 
             if(flag.stop == true){
+                // speed_base = 0;
                 speed_setpoint = 0;
                 left_speed_setpoint = 0;
                 right_speed_setpoint = 0;
