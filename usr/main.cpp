@@ -1,7 +1,5 @@
 #include "main.h"
 
-#include <bldc.h>
-
 float CAR_ANGLE_CONVERT = 3.0f;
 
 // PID相关变量
@@ -84,8 +82,9 @@ BEEP beep(GPIO61);
 Moto Moto_R(PWM2_GPIO66, 74, PWM0_GPIO64, 73, true);
 Moto Moto_L(PWM1_GPIO65, 75, PWM3_GPIO67, 72, false);
 
-Servo_Gtim Servo(SERVO_MOTOR_CHIP, SERVO_MOTOR_NUM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
-BLDC BLDC(BLDC_CHIP, BLDC_NUM, BLDC_FREQ, BLDC_DUTY_MAX, BLDC_DUTY_MIN);
+struct pwm_info servo_pwm_info;
+// Servo_Gtim Servo(SERVO_MOTOR_CHIP, SERVO_MOTOR_NUM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
+// BLDC BLDC(BLDC_CHIP, BLDC_NUM, BLDC_FREQ, BLDC_DUTY_MAX, BLDC_DUTY_MIN);
 // Servo Servo(SERVO_MOTOR_PWM, SERVO_MOTOR_FREQ, SERVO_MOTOR_L_MAX, SERVO_MOTOR_R_MAX, SERVO_MOTOR_MID);
 
 #define max_white_column_height 45
@@ -152,6 +151,7 @@ void* realtime_task(void* arg) {
     cap.set(cv::CAP_PROP_FPS, 120);
     cap.open(0);
     result_image = cv::Mat(60, 80, CV_8UC1);
+    pwm_get_dev_info(SERVO_MOTOR1_PWM, &servo_pwm_info);
 
     UI_init();
     beep.beep_ms(200);
@@ -291,9 +291,9 @@ void* realtime_task(void* arg) {
                 right_speed_setpoint -= diff;
             }
 
-            // Servo.set_angle(SERVO_MOTOR_MID - turn_angle);
             // Servo.set_duty(3000);
-            BLDC.set_bldc_duty(800);
+            pwm_set_duty(SERVO_MOTOR1_PWM, (uint16)SERVO_MOTOR_DUTY(SERVO_MOTOR_MID - turn_angle));
+            // BLDC.set_bldc_duty(800);
             // MEASURE_TIME("realtime_task_cost", {
             vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
             // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);

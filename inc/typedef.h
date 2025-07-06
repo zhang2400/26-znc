@@ -5,7 +5,6 @@
 #ifndef TYPEDEF_H
 #define TYPEDEF_H
 
-#include <cstdint>
 #include <sys/ioctl.h>
 #include <linux/fb.h>
 #include <fcntl.h>
@@ -16,11 +15,11 @@
 #include <sys/mman.h>
 
 #include "stdio.h"
-#include <cstdint>
 #include "stdbool.h"
 #include "stdarg.h"
 #include "string.h"
 #include "stdlib.h"
+#include "stdint.h"
 
 typedef float float32;
 typedef uint8_t uint8;

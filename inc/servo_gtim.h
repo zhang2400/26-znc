@@ -5,6 +5,7 @@
 #ifndef SERVO_GTIM_H
 #define SERVO_GTIM_H
 
+#include <main.h>
 #include "PwmController.h"
 
 class Servo_Gtim : public PwmController {

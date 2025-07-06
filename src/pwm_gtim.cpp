@@ -23,6 +23,8 @@
  */
 #include "pwm_gtim.h"
 
+#include <main.h>
+
 PWM_GTIM::PWM_GTIM(int gpio, int mux, int chNum_, int frequency, int duty)
     : period(frequency), duty(duty), chNum(chNum_ - 1)
 {

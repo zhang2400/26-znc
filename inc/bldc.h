@@ -5,6 +5,7 @@
 #ifndef BLDC_H
 #define BLDC_H
 
+#include <main.h>
 #include "PwmController.h"
 #include "config.h"
 

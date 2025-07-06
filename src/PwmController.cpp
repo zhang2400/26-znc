@@ -9,6 +9,7 @@
 #include "PwmController.h"
 #include <fstream>
 #include <iostream>
+#include <main.h>
 
 PwmController::PwmController(int pwmchip, int pwmnum)
     : pwmchip(pwmchip)

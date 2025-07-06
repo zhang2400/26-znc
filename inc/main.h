@@ -38,6 +38,8 @@
 #include "tft180.h"
 #include "UI.h"
 #include "servo_gtim.h"
+#include <bldc.h>
+#include <zf_driver_pwm.h>
 
 void element_count(void);
 void element_process(void);
@@ -104,6 +106,7 @@ extern double distance;
 
 extern PID_Incremental left_wheel_speed_pid;
 extern PID_Incremental right_wheel_speed_pid;
+extern struct pwm_info servo_pwm_info;
 extern Moto Moto_L;
 extern Moto Moto_R;
 extern icm20948_data_t icm20948_data;

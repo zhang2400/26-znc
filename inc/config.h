@@ -4,7 +4,6 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
-
 #ifdef __cplusplus
 #include <cstring>
 #include <cstdint>
@@ -28,7 +27,7 @@ extern "C" {
         GTIM2_GPIO89 = 89,
     };
 
-#define PWM_DUTY_MAX 10000
+// #define PWM_DUTY_MAX 10000
 
     enum Polarity {
         POLARITY_NORMAL,
@@ -53,9 +52,9 @@ extern "C" {
 #define SERVO_MOTOR_L_MAX           (SERVO_MOTOR_MID - 15)
 #define SERVO_MOTOR_R_MAX           (SERVO_MOTOR_MID + 15)
 
-#define SERVO_MOTOR_CHIP            (4)
-#define SERVO_MOTOR_NUM             (1)
-#define SERVO_MOTOR_FREQ            (50)
+#define SERVO_MOTOR_CHIP            (8)
+#define SERVO_MOTOR_NUM             (6)
+// #define SERVO_MOTOR_FREQ            (50)
 
 
 #define BLDC_CHIP                   (8)
@@ -65,6 +64,17 @@ extern "C" {
 #define BLDC_DUTY_MIN               ((float)1.0 / (float)BLDC_PERIOD * (float)PWM_DUTY_MAX)
 #define BLDC_DUTY_MAX               ((float)2.0 / (float)BLDC_PERIOD * (float)PWM_DUTY_MAX)
 #define BLDC_DUTY                   ((float)1.8 / (float)BLDC_PERIOD * (float)PWM_DUTY_MAX)
+
+
+    // 定义驱动路劲，该路劲由设备树生成
+#define SERVO_MOTOR1_PWM            "/dev/zf_device_pwm_esc_1"
+
+    // 定义主板上舵机频率  请务必注意范围 50-300
+    // 如果要修改，需要直接修改设备树。
+#define SERVO_MOTOR_FREQ            (50)
+
+    // 在设备树中，默认设置的10000。如果要修改，需要直接修改设备树。
+#define PWM_DUTY_MAX                (10000)
 
 #define WHEEL_MAX_DUTY              (4000)
 
