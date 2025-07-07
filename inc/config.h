@@ -72,6 +72,8 @@ extern "C" {
     // 电机配置
 #define WHEEL_MAX_DUTY              (6000)
 
+#define START_DELAY                 (1500)
+
 #ifdef __cplusplus
 }
 #endif

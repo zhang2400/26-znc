@@ -200,9 +200,9 @@ void UI_init(){
 
     UI_item_init(&items[6][0], "SPD_L", INT32, &Moto_L.speed);
     UI_item_init(&items[6][1], "SPD_R", INT32, &Moto_R.speed);
-    UI_item_init(&items[6][2], "LSP_Kp", FLOAT, &speed_base);
-    UI_item_init(&items[6][3], "LSP_Ki", FLOAT, &speed_setpoint);
-    UI_item_init(&items[6][4], "LSP_KD", FLOAT, &left_speed_setpoint);
+    UI_item_init(&items[6][2], "SPD_B", FLOAT, &speed_base);
+    UI_item_init(&items[6][3], "SPD_S", FLOAT, &speed_setpoint);
+    UI_item_init(&items[6][4], "START", INT8, &flag.start);
     UI_item_init(&items[6][5], "STOP", INT8, &flag.stop);
     UI_item_init(&items[6][6], "LSP_O", FLOAT, &left_wheel_pidout);
     UI_item_init(&items[6][7], "RSP_O", FLOAT, &right_wheel_pidout);
@@ -429,7 +429,7 @@ void UI_key_process(){
     if(KEY_BACK && !key_back_pressed){
         key_back_pressed = 1;
         key_pressed = 1;
-        flag.start = !flag.start;
+        flag.start = true;
         // running_start_time = system_getval_ms();
         counter.beep_ms = 300;
     } else if(!KEY_BACK && key_back_pressed){

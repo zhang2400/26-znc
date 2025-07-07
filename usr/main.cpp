@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 180;
+float speed_base = 250;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -71,10 +71,8 @@ int detect_count_max = 0;
 int blind_line;
 int protect = true;
 
-int cnt = 0;
-int j = 0;
 // int running_time = 16500;
-int running_time = 650;
+int running_time = 2000;
 
 int running_start_time = 0;
 int delay_time = running_time;
@@ -126,7 +124,6 @@ void* realtime_task(void* arg) {
     epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, &event);
 
     std::chrono::steady_clock::time_point start;
-    std::chrono::steady_clock::time_point end;
 
     int otsu_threshold = 0;
     int otsu_threshold_pers = 0;
@@ -144,7 +141,7 @@ void* realtime_task(void* arg) {
     pwm_get_dev_info(SERVO_MOTOR_PWM, &servo_pwm_info);
 
     UI_init();
-    beep.beep_ms(200);
+    BEEP::beep_ms(200);
 
     if(ret1 != 0) goto OUT;
     if(ret2 != 0) goto OUT;
@@ -158,7 +155,7 @@ void* realtime_task(void* arg) {
             read(timer_fd, &expirations, sizeof(expirations));
 
             // 定时器周期检测
-            end = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
             std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
             start = std::chrono::steady_clock::now();
             // fprintf(stdout,"timer_event 距离上次事件%.2lfms\n", time_used.count() * 1000);
@@ -168,17 +165,16 @@ void* realtime_task(void* arg) {
                 LOGW("timer_event", "`定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
 
+            // 定时器中断开始
             // MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
             printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
-
             // 图像处理
             // MEASURE_TIME("realtime_task_cost", {
             cap >> frame;
             frame.copyTo(myframe);
-
             cv::flip(myframe, myframe, -1); // 上下翻转
 
             memcpy(LQU_CAM_image, myframe.data, 320 * 240);
@@ -250,15 +246,16 @@ void* realtime_task(void* arg) {
                     wheel_turn_pid.Kd = Kd_max;
                 // }
             }else{
-                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs((double)image_diff) / 8000)) + 0.3);
-                wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs((double)image_diff) / 8000)) + 0.4);
+                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs(static_cast<double>(image_diff)) / 8000)) + 0.3);
+                wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs(static_cast<double>(image_diff)) / 8000)) + 0.4);
             }
 
+            // 更新电机速度
             Moto_L.update_speed();
             Moto_R.update_speed();
 
             // 位置环PID(需要优化)
-            turn_pidout = PID_Position_Calc(&wheel_turn_pid, 0, 0, (float) image_diff);
+            turn_pidout = PID_Position_Calc(&wheel_turn_pid, 0, 0, static_cast<float>(image_diff));
             turn_angle = turn_pidout / 10;
 
             if(turn_angle > turn_max) turn_angle = turn_max;
@@ -279,13 +276,8 @@ void* realtime_task(void* arg) {
                 right_speed_setpoint -= diff;
             }
 
-            // Servo.set_duty(3000);
-            // pwm_set_duty(SERVO_MOTOR_PWM, (uint16)SERVO_MOTOR_DUTY(SERVO_MOTOR_MID - turn_angle));
-            // pwm_set_duty(BLDC_MOTOR_PWM, (uint16)BLDC_DUTY);
             servo_set_angle(SERVO_MOTOR_MID - turn_angle);
-            bldc_set_duty(BLDC_DUTY);
 
-            // BLDC.set_bldc_duty(800);
             // MEASURE_TIME("realtime_task_cost", {
             vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
             // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);
@@ -315,34 +307,44 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("diff:%d,cnt:%d,kp:%.2f,kd:%.2f,ang:%.2f\n",image_diff,counter.drive_in_left_roundabout,wheel_turn_pid.Kp,wheel_turn_pid.Kd,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
             // });
-            // 速度环PID
 
-            if (flag.stop == false) {
-                if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
-                    speed_setpoint = 120;
-                }else {
-                    if(max_white_column.left_height > max_white_column_height) {
-                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column_height - max_white_column_height) / 3.3)));
-                    } else {
-                        speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh((float) abs( max_white_column.left_height - max_white_column_height) / 3.3)));
-                    }
+            // 速度环PID
+            if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
+                speed_setpoint = 120;
+            }else {
+                if(max_white_column.left_height > max_white_column_height) {
+                    speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column_height - max_white_column_height)) / 3.3)));
+                } else {
+                    speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
                 }
             }
 
-            if(flag.stop == true){
-                // speed_base = 0;
-                speed_setpoint = 0;
-                left_speed_setpoint = 0;
-                right_speed_setpoint = 0;
-            }
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
             // right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
+            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, static_cast<float32>(Moto_L.speed), speed_base);
+            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, static_cast<float32>(Moto_R.speed), speed_base);
 
-            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, speed_base);
-            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, speed_base);
-
-            Moto_L.set_speed(-(int)left_wheel_pidout);
-            Moto_R.set_speed(-(int)right_wheel_pidout);
+            // 设置速度
+            if(flag.stop){
+                // if(counter.start_motor_delay > 0){
+                //     Moto_L.set_speed(-static_cast<int>(left_wheel_pidout));
+                //     Moto_R.set_speed(-static_cast<int>(right_wheel_pidout));
+                //     counter.start_motor_delay -= 10;
+                // } else {
+                    Moto_L.set_speed(0);
+                    Moto_R.set_speed(0);
+                // }
+                bldc_set_duty(BLDC_DUTY_MIN);
+            }else {
+                if(flag.start == true){
+                    if(counter.start_motor_delay > START_DELAY){
+                        Moto_L.set_speed(-static_cast<int>(left_wheel_pidout));
+                        Moto_R.set_speed(-static_cast<int>(right_wheel_pidout));
+                    }
+                    bldc_set_duty(BLDC_DUTY);
+                    counter.start_motor_delay += 10;
+                }
+            }
 
             image_diff_process();
 
@@ -369,7 +371,7 @@ void* realtime_task(void* arg) {
                 flag.stop = true;
             }
 
-            if (Moto_L.speed > 25 || Moto_R.speed > 25) {
+            if (Moto_L.speed > 50 || Moto_R.speed > 50) {
                 if (flag.start == false) {
                     left_wheel_speed_pid.error = 0;
                     left_wheel_speed_pid.last_error = 0;
@@ -382,31 +384,31 @@ void* realtime_task(void* arg) {
                     right_wheel_speed_pid.last_out = 0;
                     right_wheel_speed_pid.out = 0;
                 }
-                flag.start = true;
             }
 
             // 电机堵转或编码器异常时停止电机
             if(protect == true) {
-                if ((abs(Moto_L.speed) < 10 && abs(left_speed_setpoint) > 40) ||
-                    (abs(Moto_R.speed) < 10 && abs(right_speed_setpoint) > 40)) {
+                if ((abs(Moto_L.speed) < 10 && abs(Moto_L.speed - Moto_R.speed) > 60) ||
+                    (abs(Moto_R.speed) < 10 && abs(Moto_L.speed - Moto_R.speed) > 60)) {
                         counter.stop_motor += 10;
                 } else {
                     counter.stop_motor = 0;
-                    }
+                }
 
-                if (counter.stop_motor > 500) {
-                    // flag.stop = true;
+                if (counter.stop_motor > 250) {
+                    flag.stop = true;
                 }
             }
 
             if (running_time <= 0) {
                 flag.stop = true;
             }
-            if (running_time > 0 && flag.start) {
+            if (running_time > 0 && flag.start && counter.start_motor_delay > START_DELAY) {
                 running_time -= 10;
             }
         }
     }
+            // 定时器中断结束
 
 OUT:
     close(timer_fd);
@@ -423,7 +425,7 @@ void element_count() {
         counter.found_left_roundabout = 0;
         counter.found_right_roundabout = 0;
         if(counter.found_crossroad > 2){
-            beep.beep_ms(500);
+            BEEP::beep_ms(500);
             counter.drive_in_crossroad = 4000;
         }
     }
@@ -440,7 +442,7 @@ void element_count() {
     if (flag.found_garage == true && counter.drive_in_ramp == 0 && counter.drive_in_crossroad == 0 && running_time < delay_time - 2000) {
         counter.found_garage += 2;
         if (counter.found_garage > 3) {
-            beep.beep_ms(400);
+            BEEP::beep_ms(400);
             counter.drive_in_garage = 180;
         }
     }
@@ -457,7 +459,7 @@ void element_count() {
     if(flag.found_ramp && counter.drive_in_ramp == 0){
         counter.found_ramp += 2;
         if(counter.found_ramp > 7){
-            beep.beep_ms(200);
+            BEEP::beep_ms(200);
             counter.drive_in_ramp = 300;
         }
     }
@@ -472,9 +474,9 @@ void element_count() {
 
     // 障碍计数处理
     if(flag.found_obstacle == true && counter.drive_in_obstacle == 0 && counter.drive_in_ramp == 0 && counter.drive_in_obstacle == 0) {
-        counter.found_obstacle +=2;
+        counter.found_obstacle += 2;
         if (counter.found_obstacle > 3) {
-            beep.beep_ms(200);
+            BEEP::beep_ms(200);
             counter.drive_in_obstacle = 1200;
         }
     }
@@ -491,7 +493,7 @@ void element_count() {
     if(flag.found_left_roundabout && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0 && counter.drive_in_ramp == 0) {
         counter.found_left_roundabout += 2;
         if(counter.found_left_roundabout > 3){
-            beep.beep_ms(200);
+            BEEP::beep_ms(200);
             counter.drive_in_left_roundabout = 10000;
         }
     }
@@ -502,14 +504,14 @@ void element_count() {
 
     if(counter.drive_in_left_roundabout > 0){
         counter.drive_in_left_roundabout -= 10;
-        counter.drive_in_left_roundabout-=(counter.drive_in_left_roundabout%10);
+        counter.drive_in_left_roundabout -= (counter.drive_in_left_roundabout % 10);
     }
 
     // 右环岛计数处理
     if(flag.found_right_roundabout && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0 && counter.drive_in_ramp == 0) {
         counter.found_right_roundabout += 2;
         if(counter.found_right_roundabout > 3){
-            beep.beep_ms(200);
+            BEEP::beep_ms(200);
             counter.drive_in_right_roundabout = 10000;
         }
     }
@@ -520,7 +522,7 @@ void element_count() {
 
     if(counter.drive_in_right_roundabout > 0){
         counter.drive_in_right_roundabout -= 10;
-        counter.drive_in_right_roundabout-=(counter.drive_in_right_roundabout%10);
+        counter.drive_in_right_roundabout -= (counter.drive_in_right_roundabout % 10);
     }
     // vofa_udp.printf("lr:%d,rr:%d,dis:%.2f,bs:%d,be:%d\n",counter.drive_in_left_roundabout,counter.drive_in_right_roundabout,distance,bottom_start_x,bottom_end_x);
 
@@ -561,7 +563,7 @@ void element_process() {
     if (counter.drive_in_left_roundabout > 5001) {
         fix_left_break(0,60);
         if (distance != -1) {
-            counter.drive_in_left_roundabout = (float)(5.0f * distance + 4800);
+            counter.drive_in_left_roundabout = static_cast<float>(5.0f * distance + 4800);
         }
         angelZ = icm20948_data.anglez;
     }else if(counter.drive_in_left_roundabout > 100) {
@@ -573,7 +575,7 @@ void element_process() {
             counter.drive_in_left_roundabout = 500;
         } else if(counter.drive_in_left_roundabout > 300){
             fix_left_break(0, 60);
-            beep.beep_ms(200);
+            BEEP::beep_ms(200);
         } else if(counter.drive_in_left_roundabout > 100){
             fix_left_break(0, 60);
             if(distances[10] < road_distances[10]){
@@ -586,7 +588,7 @@ void element_process() {
     if (counter.drive_in_right_roundabout > 5001) {
         fix_right_break(0,60);
         if (distance != -1) {
-            counter.drive_in_right_roundabout = (float)(5.0f * distance + 4850);
+            counter.drive_in_right_roundabout = static_cast<float>(5.0f * distance + 4850);
         }
         angelZ = icm20948_data.anglez;
     }else if(counter.drive_in_right_roundabout > 100) {
@@ -598,7 +600,7 @@ void element_process() {
             counter.drive_in_right_roundabout = 500;
         } else if(counter.drive_in_right_roundabout > 300){
             fix_right_break(0,45);
-            beep.beep_ms(200);
+            BEEP::beep_ms(200);
         } else if(counter.drive_in_right_roundabout > 100) {
             fix_right_break(0, 45);
             if (distances[10] < road_distances[10]) {
@@ -625,7 +627,7 @@ void image_diff_process() {
         for(int i = 0; i < distance_middle_line_index; i++){
             float y_weight= 60 - distance_middle_line[i][1];
             if (y_weight<0) y_weight=0;
-            left_sum -= (float)(distance_middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
+            left_sum -= static_cast<float>(distance_middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
         }
         left_sum *= 15;
         image_diff = right_sum - left_sum;
@@ -637,11 +639,11 @@ void image_diff_process() {
         int img_end = img_start + 40;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
-            float dec = 4 *max_white_column.left_height-150;
+            float dec = 4 * max_white_column.left_height - 150;
             if (dec<0) dec=0;
-            float y_weight=(float)middle_line[i][1]-dec;
+            float y_weight=static_cast<float>(middle_line[i][1])-dec;
             if (y_weight<0) y_weight=0;
-            left_sum -= (float)(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
+            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
             // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
         }
         left_sum *= 10;
@@ -655,14 +657,14 @@ void image_diff_process() {
         int img_end = img_start + 40;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
-            float dec = 4 *max_white_column.left_height-150;
+            float dec = 4 * max_white_column.left_height - 150;
             if (dec<0) dec=0;
-            float y_weight=(float)middle_line[i][1]-dec;
+            float y_weight=static_cast<float>(middle_line[i][1])-dec;
             if (y_weight<0) y_weight=0;
             if (running_time > 4500) {
-                left_sum -= (float)(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f) * (0.8 + (i - (img_end - img_start) / 2) * 0.08);
+                left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f) * (0.8 + (i - (img_end - img_start) / 2) * 0.08);
             }else {
-                left_sum -= (float)(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight / 20.0f);
+                left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight / 20.0f);
             }
         }
         left_sum *= 10;
