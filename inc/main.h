@@ -45,27 +45,27 @@ void element_process(void);
 void element_check(void);
 void image_diff_process(void);
 
-// Í¼ÏñºÍ´«¸ÐÆ÷Êý¾Ý½á¹¹
+// Í¼ï¿½ï¿½Í´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹
 struct FrameData {
     cv::Mat frame;
-    int sensor_value{}; // Ä£Äâ´«¸ÐÆ÷Êý¾Ý
+    int sensor_value{}; // Ä£ï¿½â´«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 };
 
-// ÎÞËø»·ÐÎ»º³åÇø
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½
 class RingBuffer {
 public:
     explicit RingBuffer(int size) : buffer(size), head(0), tail(0) {}
 
     bool push(const FrameData& data) {
         int next_head = (head + 1) % buffer.size();
-        if (next_head == tail) return false; // »º³åÇøÂú
+        if (next_head == tail) return false; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         buffer[head] = data;
         head = next_head;
         return true;
     }
 
     bool pop(FrameData& data) {
-        if (tail == head) return false; // »º³åÇø¿Õ
+        if (tail == head) return false; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         data = buffer[tail];
         tail = (tail + 1) % buffer.size();
         return true;
@@ -87,6 +87,7 @@ extern float right_speed_setpoint;
 extern float Kp_max;
 extern float Kd_max;
 extern float CAR_ANGLE_CONVERT;
+extern int image_diff;
 extern int lost_x1;
 extern int lost_x2;
 extern int lost_y1;

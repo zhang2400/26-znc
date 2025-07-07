@@ -39,7 +39,7 @@ extern "C" {
 
     // 图像处理
 #define DISTANCE(x1, y1, x2, y2) sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2))
-#define IMAGE_MIDDLE            37
+#define IMAGE_MIDDLE            40
 
     // MATH
 #define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
@@ -50,7 +50,7 @@ extern "C" {
 
     // 定义驱动路劲，该路劲由设备树生成
 #define SERVO_MOTOR_PWM            "/dev/zf_device_pwm_esc_1"
-#define SERVO_MOTOR_MID             (82.5)
+#define SERVO_MOTOR_MID             (83.5)
 #define SERVO_MOTOR_L_MAX           (SERVO_MOTOR_MID - 15)
 #define SERVO_MOTOR_R_MAX           (SERVO_MOTOR_MID + 15)
 
