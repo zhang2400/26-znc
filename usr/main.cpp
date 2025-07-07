@@ -72,7 +72,7 @@ int blind_line;
 int protect = true;
 
 // int running_time = 16500;
-int running_time = 2000;
+int running_time = 650;
 
 int running_start_time = 0;
 int delay_time = running_time;
@@ -326,21 +326,26 @@ void* realtime_task(void* arg) {
 
             // 设置速度
             if(flag.stop){
-                // if(counter.start_motor_delay > 0){
-                //     Moto_L.set_speed(-static_cast<int>(left_wheel_pidout));
-                //     Moto_R.set_speed(-static_cast<int>(right_wheel_pidout));
-                //     counter.start_motor_delay -= 10;
-                // } else {
+                speed_base = 0;
+                speed_setpoint = 0;
+                left_speed_setpoint = 0;
+                right_speed_setpoint = 0;
+                if(counter.start_motor_delay > 0){
+                    Moto_L.set_speed(-static_cast<int>(left_wheel_pidout));
+                    Moto_R.set_speed(-static_cast<int>(right_wheel_pidout));
+                    counter.start_motor_delay -= 10;
+                } else {
                     Moto_L.set_speed(0);
                     Moto_R.set_speed(0);
-                // }
+                }
                 bldc_set_duty(BLDC_DUTY_MIN);
             }else {
                 if(flag.start == true){
-                    if(counter.start_motor_delay > START_DELAY){
+                    if(counter.start_motor_delay > MOTO_START_DELAY){
                         Moto_L.set_speed(-static_cast<int>(left_wheel_pidout));
                         Moto_R.set_speed(-static_cast<int>(right_wheel_pidout));
                     }
+                    if (counter.start_motor_delay > BLDC_START_DELAY)
                     bldc_set_duty(BLDC_DUTY);
                     counter.start_motor_delay += 10;
                 }
@@ -403,7 +408,7 @@ void* realtime_task(void* arg) {
             if (running_time <= 0) {
                 flag.stop = true;
             }
-            if (running_time > 0 && flag.start && counter.start_motor_delay > START_DELAY) {
+            if (running_time > 0 && flag.start && counter.start_motor_delay > MOTO_START_DELAY) {
                 running_time -= 10;
             }
         }

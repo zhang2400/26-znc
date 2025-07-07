@@ -63,6 +63,7 @@ extern "C" {
 
     // bldc配置
     // 定义驱动路劲，该路劲由设备树生成
+    // 50hz下 bldc的pwm范围为1.0ms-2.0ms
 #define BLDC_MOTOR_PWM              "/dev/zf_device_pwm_servo"
 #define BLDC_PERIOD                 ((float)1.0 / ((float)SERVO_MOTOR_FREQ / 1000))
 #define BLDC_DUTY_MIN               ((float)1.0 / (float)BLDC_PERIOD * (float)PWM_DUTY_MAX)
@@ -72,7 +73,9 @@ extern "C" {
     // 电机配置
 #define WHEEL_MAX_DUTY              (6000)
 
-#define START_DELAY                 (1500)
+    // 启动延迟
+#define BLDC_START_DELAY            (1000)
+#define MOTO_START_DELAY            (2000)
 
 #ifdef __cplusplus
 }
