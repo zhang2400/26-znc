@@ -9,6 +9,8 @@
 
 typedef struct{
     int erase;  // 擦除的白色像素点数量
+    int16_t skip_left_border;   // 跳过左边界计数
+    int16_t skip_right_border;  // 跳过右边界计数
     int16_t found_left_roundabout;  // 发现左环岛计数
     int16_t found_right_roundabout;  // 发现右环岛计数
     int16_t found_crossroad;  // 发现十字路口计数

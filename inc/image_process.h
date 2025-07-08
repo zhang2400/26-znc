@@ -152,6 +152,8 @@ void draw_rectan();
 
 int get_border_line(int detect_count_max);
 
+int get_border_line_sec(int detect_count_max);
+
 int get_border_line_pers(int detect_count_max);
 
 void get_max_middle_line_height();

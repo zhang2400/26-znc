@@ -5,6 +5,8 @@
 //计数器结构体初始化
 Counter counter = {
     .erase = 0,
+    .skip_left_border = 0,
+    .skip_right_border = 0,
     .beep_ms = 0,
     .start_motor_delay = 0,
 };

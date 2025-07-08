@@ -90,6 +90,10 @@ int right_lost_count;
 int left_lost_dir = 0;
 int right_lost_dir = 0;
 
+int left_border_x = 0;
+int right_border_x = 0;
+int left_border_y = 0;
+int right_border_y = 0;
 
 int fix_x1 = 0;
 int fix_x2 = 0;
@@ -756,10 +760,6 @@ void draw_rectan(){
         binary_image[i][0] = border_color;
         binary_image[i][80 - 1] = border_color;
         binary_image[i][80 - 2] = border_color;
-        binary_image[i][80 - 3] = border_color;
-        binary_image[i][80 - 4] = border_color;
-        binary_image[i][80 - 5] = border_color;
-        binary_image[i][80 - 6] = border_color;
     }
     for (i = 0; i < 80; i++){
         binary_image[0][i] = border_color;
@@ -819,7 +819,246 @@ int get_border_line(int detect_count_max) {
     // vofa_udp.printf(":%d,%d,%d,%d,%d,%d\n",left_x,left_y,right_x,right_y,bottom_start_x,bottom_end_x);
     for(detect_count = 0; detect_count < detect_count_max; detect_count++) {
         // 左边界
-        if(detect_count > 15 && sqrt((left_x - left_border[left_border_index-5][0]) * (left_x - left_border[left_border_index-5][0]) + (left_y - left_border[left_border_index-5][1]) * (left_y - left_border[left_border_index-5][1])) < 4){
+        if(detect_count > 15 && sqrt((left_x - left_border[left_border_index- 5][0]) * (left_x - left_border[left_border_index - 5][0]) + (left_y - left_border[left_border_index - 5][1]) * (left_y - left_border[left_border_index - 5][1])) < 4){
+            if(left_skip_index == 0){
+                left_skip_index = left_border_index;
+            }
+        } else if( (detect_count > 15 && left_x < 4)) {
+            if(left_skip_index == 0){
+                left_skip_index = left_border_index;
+            }
+        }else if (left_y < 20){
+            if (flaghighl==false)flaghighl=true;
+        } else if (left_dir != 3 && binary_image[left_y - 1][left_x + 1] == road_color &&
+                   binary_image[left_y - 1][left_x] == border_color){  // 右上黑，方向3，正上白
+            left_y = left_y - 1;
+            left_x = left_x + 1;
+            left_dir = 6;
+        } else if (left_dir != 4 && binary_image[left_y][left_x + 1] == road_color &&
+                   binary_image[left_y - 1][left_x + 1] == border_color){  // 正右黑，方向4，右上白
+            left_x = left_x + 1;
+            left_dir = 5;
+        } else if (left_dir != 1 && binary_image[left_y - 1][left_x] == road_color &&
+                   binary_image[left_y - 1][left_x - 1] == border_color){  // 正上黑，方向1，左上白
+            left_y = left_y - 1;
+            left_dir = 0;
+        } else if (left_dir != 2 && binary_image[left_y - 1][left_x - 1] == road_color &&
+                   binary_image[left_y][left_x - 1] == border_color){  // 左上黑，方向2，正右白
+            left_y = left_y - 1;
+            left_x = left_x - 1;
+            left_dir = 7;
+        } else if (left_dir !=5 && binary_image[left_y][left_x - 1] == road_color &&
+                   binary_image[left_y + 1][left_x - 1] == border_color){  // 正左黑，方向5，左下白
+            left_x = left_x - 1;
+            left_dir = 4;
+        } else if (left_dir != 6 && binary_image[left_y + 1][left_x - 1] == road_color &&
+                   binary_image[left_y + 1][left_x] == border_color){  // 左下黑，方向6，正下白
+            left_y = left_y + 1;
+            left_x = left_x - 1;
+            left_dir = 3;
+        } else if (left_dir != 7 && binary_image[left_y + 1][left_x + 1] == road_color &&
+                   binary_image[left_y][left_x + 1] == border_color){  // 右下黑，方向7，正右白
+            left_y = left_y + 1;
+            left_x = left_x + 1;
+            left_dir = 2;
+        } else if (left_dir != 0 && binary_image[left_y + 1][left_x] == road_color &&
+                   binary_image[left_y + 1][left_x + 1] == border_color){  // 正下黑，方向8，右下白
+            if(left_skip_index == 0){
+                left_skip_index = left_border_index;
+            }
+        } else {
+            break;
+        }
+
+        // if (left_x < 3 && left_border_index < 40) left_reach_edge++;
+        // if (left_x > 10) flag.left_border = false;
+        // if (left_x > 60) flag.need_sec_border = true;
+        left_border_index++;
+        if (left_border_index != 0){
+            left_border[left_border_index][0] = left_x;
+            left_border[left_border_index][1] = left_y;
+        }
+        left_dirs[left_border_index] = left_dir;
+
+        if(left_x == right_x && left_y == right_y){
+            break;
+        }
+
+        // 右边界
+        if(detect_count > 15 && sqrt((right_x - right_border[right_border_index-5][0]) * (right_x - right_border[right_border_index-5][0]) + (right_y - right_border[right_border_index-5][1]) * (right_y - right_border[right_border_index-5][1])) < 4){
+            if(right_skip_index == 0){
+                right_skip_index = right_border_index;
+            }
+        } else if((detect_count > 15 && right_x > 75)) {
+            if(right_skip_index == 0){
+                right_skip_index = right_border_index;
+            }
+        } else if (right_y < 20){
+            if (flaghighr==false)flaghighr=true;
+        } else if(right_dir != 2 && binary_image[right_y - 1][right_x - 1] == road_color &&
+                  binary_image[right_y - 1][right_x] == border_color) {  // 左上黑，方向2，正上白
+            right_y = right_y - 1;
+            right_x = right_x - 1;
+            right_dir = 7;
+        } else if(right_dir != 5 && binary_image[right_y][right_x - 1] == road_color &&
+                  binary_image[right_y - 1][right_x - 1] == border_color){  // 正左黑，方向5，正上白
+            right_x = right_x - 1;
+            right_dir = 4;
+        } else if(right_dir != 1 && binary_image[right_y - 1][right_x] == road_color &&
+                  binary_image[right_y - 1][right_x + 1] == border_color){  // 正上黑，方向1，右上白
+            right_y = right_y - 1;
+            right_dir = 0;
+        } else if (right_x < 80 && right_dir != 3 && binary_image[right_y - 1][right_x + 1] == road_color &&
+                   binary_image[right_y][right_x + 1] == border_color){  // 右上黑，方向3，正右白
+            right_y = right_y - 1;
+            right_x = right_x + 1;
+            right_dir = 6;
+        } else if(right_dir != 4 && binary_image[right_y][right_x + 1] == road_color &&
+                  binary_image[right_y + 1][right_x + 1] == border_color){  // 正右黑，方向4，正下白
+            right_x = right_x + 1;
+            right_dir = 5;
+        } else if(right_dir != 6 && binary_image[right_y + 1][right_x - 1] == road_color &&
+                  binary_image[right_y][right_x - 1] == border_color){  // 左下黑，方向6，正左白
+            right_y = right_y + 1;
+            right_x = right_x - 1;
+            right_dir = 3;
+        } else if(right_dir != 7 && binary_image[right_y + 1][right_x + 1] == road_color &&
+                  binary_image[right_y + 1][right_x] == border_color) {  // 右下黑，方向7，正下白
+            right_y = right_y + 1;
+            right_x = right_x + 1;
+            right_dir = 2;
+        } else if(right_dir != 0 && binary_image[right_y + 1][right_x] == road_color &&
+                  binary_image[right_y + 1][right_x - 1] == border_color){  // 正下黑，方向8，左下白
+            if(right_skip_index == 0){
+                right_skip_index = right_border_index;
+            }
+        } else {
+            break;
+        }
+        // if (right_x > 70 && right_border_index < 40) right_reach_edge++;
+        // if (right_x < 65) flag.right_border = false;
+        // if (right_x < 20) flag.need_sec_border = true;
+        right_border_index++;
+        if (right_border_index != 0){
+            right_border[right_border_index][0] = right_x;
+            right_border[right_border_index][1] = right_y;
+        }
+        right_dirs[right_border_index] = right_dir;
+
+        if(left_x == right_x && left_y == right_y){
+            break;
+        }
+        if (flaghighl&&flaghighr) {
+            break;
+        }
+        left_border_x = left_x;
+        left_border_y = left_y;
+        right_border_x = right_x;
+        right_border_y = right_y;
+    }
+    detect_count_max = detect_count;
+
+    // if (left_reach_edge >= 10) {
+    //     flag.left_sec_border = true;
+    // }
+    //
+    // if (right_reach_edge >= 10) {
+    //     flag.right_sec_border = true;
+    // }
+    //
+    // if (flag.need_sec_border && flag.left_sec_border && flag.left_border) {
+    //     for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
+    //         left_border[detect_count][0] = 1;
+    //         left_border[detect_count][1] = 58;
+    //     }
+    // }
+    //
+    // if (flag.need_sec_border && flag.right_sec_border && flag.right_border) {
+    //     for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
+    //         right_border[detect_count][0] = 73;
+    //         right_border[detect_count][1] = 58;
+    //     }
+    // }
+
+    // get_border_line_sec(detect_count_max);
+    // 计算中线
+    memset(middle_line, 0, sizeof(middle_line));
+    middle_line_index = 0;
+    for(int q = 0; q < detect_count_max; q++){
+        middle_line[q][0] = (left_border[q][0] + right_border[q][0]) / 2;
+        middle_line[q][1] = (left_border[q][1] + right_border[q][1]) / 2;
+        middle_line_index++;
+    }
+
+    memset(middle_line_single, 0, sizeof(middle_line_single));
+    middle_line_single_index = 0;
+    int middle_line_current_y = -1;
+    for(int q = 0; q < detect_count_max; q++){
+        if(middle_line[q][1] != middle_line_current_y && middle_line[q][1] != 0){
+            middle_line_single[middle_line_single_index][0] = middle_line[q][0];
+            middle_line_single[middle_line_single_index][1] = middle_line[q][1];
+            middle_line_single_index++;
+            middle_line_current_y = middle_line[q][1];
+        }
+    }
+
+    return detect_count_max;
+}
+
+int get_border_line_sec(int detect_count_max) {
+     int left_x, left_y, right_x, right_y;  // 爬线时坐标
+    left_border_index = 0;  // 爬线时左边界索引
+    right_border_index = 0;  // 爬线时右边界索引
+    left_skip_index = 0;  // 爬线时左边界跳过索引
+    right_skip_index = 0;  // 爬线时右边界跳过索引
+    left_reach_edge = 0;
+    right_reach_edge = 0;
+    int left_dir;  // 爬线时左边界方向
+    int right_dir;  // 爬线时右边界方向
+    int detect_count;  // 爬线时检测次数
+    int flaghighl=false;
+    int flaghighr=false;
+    flag.need_sec_border = false;
+    flag.left_sec_border = false;
+    flag.right_sec_border = false;
+    flag.left_border = true;
+    flag.right_border = true;
+
+    road_color = 0;
+    border_color = 255;
+
+    memset(left_border, 0, sizeof(left_border));
+    memset(right_border, 0, sizeof(right_border));
+    memset(left_dirs, 0, sizeof(left_dirs));
+    memset(right_dirs, 0, sizeof(right_dirs));
+    // 初始边界点在道路内
+    int first_x;
+    int first_y = 50;
+    for (first_x = (bottom_start_x + bottom_end_x) / 2; first_x >= 0; first_x--) {
+        if (binary_image[first_y][first_x] == road_color && binary_image[first_y][first_x - 1] != road_color) {
+            left_border[left_border_index][0] = first_x;
+            left_border[left_border_index][1] = first_y;
+            break;
+        }
+    }
+
+    for (first_x = (bottom_start_x + bottom_end_x) / 2; first_x < 80; first_x++) {
+        if (binary_image[first_y][first_x] == road_color && binary_image[first_y][first_x + 1] != road_color) {
+            right_border[right_border_index][0] = first_x;
+            right_border[right_border_index][1] = first_y;
+            break;
+        }
+    }
+    left_x = left_border[left_border_index][0];
+    left_y = left_border[left_border_index][1];
+    right_x = right_border[right_border_index][0];
+    right_y = right_border[right_border_index][1];
+    left_dir = -1;  // 重置左边界方向
+    right_dir = -1;  // 重置右边界方向
+    // vofa_udp.printf(":%d,%d,%d,%d,%d,%d\n",left_x,left_y,right_x,right_y,bottom_start_x,bottom_end_x);
+    for(detect_count = 0; detect_count < detect_count_max; detect_count++) {
+        // 左边界
+        if(detect_count > 15 && sqrt((left_x - left_border[left_border_index- 5][0]) * (left_x - left_border[left_border_index - 5][0]) + (left_y - left_border[left_border_index - 5][1]) * (left_y - left_border[left_border_index - 5][1])) < 4){
             if(left_skip_index == 0){
                 left_skip_index = left_border_index;
             }
@@ -948,54 +1187,11 @@ int get_border_line(int detect_count_max) {
         if(left_x == right_x && left_y == right_y){
             break;
         }
-        if (flaghighl&&flaghighr) {
+        if (flaghighl && flaghighr) {
             break;
         }
     }
     detect_count_max = detect_count;
-
-    // if (left_reach_edge >= 10) {
-    //     flag.left_sec_border = true;
-    // }
-    //
-    // if (right_reach_edge >= 10) {
-    //     flag.right_sec_border = true;
-    // }
-    //
-    // if (flag.need_sec_border && flag.left_sec_border && flag.left_border) {
-    //     for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
-    //         left_border[detect_count][0] = 1;
-    //         left_border[detect_count][1] = 58;
-    //     }
-    // }
-    //
-    // if (flag.need_sec_border && flag.right_sec_border && flag.right_border) {
-    //     for (detect_count = 0; detect_count < detect_count_max; detect_count++) {
-    //         right_border[detect_count][0] = 73;
-    //         right_border[detect_count][1] = 58;
-    //     }
-    // }
-    // 计算中线
-    memset(middle_line, 0, sizeof(middle_line));
-    middle_line_index = 0;
-    for(int q = 0; q < detect_count_max; q++){
-        middle_line[q][0] = (left_border[q][0] + right_border[q][0]) / 2;
-        middle_line[q][1] = (left_border[q][1] + right_border[q][1]) / 2;
-        middle_line_index++;
-    }
-
-    memset(middle_line_single, 0, sizeof(middle_line_single));
-    middle_line_single_index = 0;
-    int middle_line_current_y = -1;
-    for(int q = 0; q < detect_count_max; q++){
-        if(middle_line[q][1] != middle_line_current_y && middle_line[q][1] != 0){
-            middle_line_single[middle_line_single_index][0] = middle_line[q][0];
-            middle_line_single[middle_line_single_index][1] = middle_line[q][1];
-            middle_line_single_index++;
-            middle_line_current_y = middle_line[q][1];
-        }
-    }
-
     return detect_count_max;
 }
 

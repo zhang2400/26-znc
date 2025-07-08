@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 250;
+float speed_base = 160;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -72,7 +72,7 @@ int blind_line;
 int protect = true;
 
 // int running_time = 16500;
-int running_time = 650;
+int running_time = 2000;
 
 int running_start_time = 0;
 int delay_time = running_time;
@@ -321,8 +321,8 @@ void* realtime_task(void* arg) {
 
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
             // right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
-            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, static_cast<float32>(Moto_L.speed), speed_base);
-            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, static_cast<float32>(Moto_R.speed), speed_base);
+            left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, static_cast<float32>(Moto_L.speed), left_speed_setpoint);
+            right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, static_cast<float32>(Moto_R.speed), right_speed_setpoint);
 
             // 设置速度
             if(flag.stop){
@@ -728,7 +728,7 @@ void *non_realtime_task(void *arg) {
                 tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
-                tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
+                // tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
 
                 cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
                 tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));

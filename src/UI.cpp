@@ -207,6 +207,16 @@ void UI_init(){
     UI_item_init(&items[6][6], "LSP_O", FLOAT, &left_wheel_pidout);
     UI_item_init(&items[6][7], "RSP_O", FLOAT, &right_wheel_pidout);
 
+    UI_item_init(&items[7][0], "diff", INT32, &image_diff);
+    UI_item_init(&items[7][1], "L_X", INT32, &left_border_x);
+    UI_item_init(&items[7][2], "L_Y", INT32, &left_border_y);
+    UI_item_init(&items[7][3], "R_X", INT32, &right_border_x);
+    UI_item_init(&items[7][4], "R_Y", INT32, &right_border_y);
+    UI_item_init(&items[7][5], "SIKPL", INT16, &counter.skip_left_border);
+    UI_item_init(&items[7][6], "SIKPR", INT16, &counter.skip_right_border);
+    // UI_item_init(&items[7][5], "START", INT8, &flag.start);
+    // UI_item_init(&items[7][6], "STOP", INT8, &flag.stop);
+
 
     UI_item_init(&items[5][0], "TKp  ", FLOAT, &Kp_max);
     UI_item_init(&items[5][1], "TKd  ", FLOAT, &Kd_max);
