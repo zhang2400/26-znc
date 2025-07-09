@@ -189,6 +189,14 @@ void UI_init(){
     UI_item_init(&items[1][6], "speed_L", INT32, &Moto_L.speed);
     UI_item_init(&items[1][7], "speed_R", INT32, &Moto_R.speed);
 
+    UI_item_init(&items[3][0], "cnt", INT8, &cnt);
+    UI_item_init(&items[3][1], "index", INT32, &dis_index);
+    UI_item_init(&items[3][2], "DIS_L", INT8, &left_distance_line[dis_index][0]);
+    UI_item_init(&items[3][3], "DIS_R", INT8, &right_distance_line[dis_index][0]);
+    UI_item_init(&items[3][4], "DIS_M", INT8, &distance_middle_line[dis_index][0]);
+    UI_item_init(&items[3][5], "DIS", INT8, &distances[dis_index]);
+    UI_item_init(&items[3][6], "diff", INT32, &image_diff);
+
     UI_item_init(&items[4][0], "diff", INT32, &image_diff);
     UI_item_init(&items[4][1], "SPD_R", INT32, &Moto_R.speed);
     UI_item_init(&items[4][2], "SPD_BA", FLOAT, &speed_base);
@@ -208,12 +216,14 @@ void UI_init(){
     UI_item_init(&items[6][7], "RSP_O", FLOAT, &right_wheel_pidout);
 
     UI_item_init(&items[7][0], "diff", INT32, &image_diff);
-    UI_item_init(&items[7][1], "L_X", INT32, &left_border_x);
-    UI_item_init(&items[7][2], "L_Y", INT32, &left_border_y);
-    UI_item_init(&items[7][3], "R_X", INT32, &right_border_x);
-    UI_item_init(&items[7][4], "R_Y", INT32, &right_border_y);
-    UI_item_init(&items[7][5], "SIKPL", INT16, &counter.skip_left_border);
-    UI_item_init(&items[7][6], "SIKPR", INT16, &counter.skip_right_border);
+    UI_item_init(&items[7][1], "FIX_L", INT32, &counter.left_img_fix);
+    UI_item_init(&items[7][2], "FIX_R", INT32, &counter.right_img_fix);
+    UI_item_init(&items[7][3], "L_X", INT32, &left_border_x);
+    UI_item_init(&items[7][4], "L_Y", INT32, &left_border_y);
+    UI_item_init(&items[7][5], "R_X", INT32, &right_border_x);
+    UI_item_init(&items[7][6], "R_Y", INT32, &right_border_y);
+    // UI_item_init(&items[7][5], "SEC_L", INT8, &flag.left_sec_border);
+    // UI_item_init(&items[7][6], "SEC_R", INT8, &flag.right_sec_border);
     // UI_item_init(&items[7][5], "START", INT8, &flag.start);
     // UI_item_init(&items[7][6], "STOP", INT8, &flag.stop);
 

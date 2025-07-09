@@ -88,6 +88,8 @@ extern float Kp_max;
 extern float Kd_max;
 extern float CAR_ANGLE_CONVERT;
 extern int image_diff;
+extern int dis_index;
+extern int8_t cnt;
 extern int lost_x1;
 extern int lost_x2;
 extern int lost_y1;

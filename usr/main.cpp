@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 160;
+float speed_base = 140;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -40,6 +40,7 @@ uint8_t gray1ch_image[60][80];
 
 int cornering;
 int image_diff;
+int last_diff;
 
 int left_sum;
 int right_sum;
@@ -48,7 +49,7 @@ int end;
 
 int dis_index = 0;
 int rstate = 0;
-int count = 0;
+int8_t cnt = 0;
 float angelZ = 0;
 int cross_roundabout = 0;
 float ramp_angle = 0;
@@ -64,8 +65,8 @@ auto vofa_tcp = VOFA(std::move(tcp_transport));
 auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
-int incision = 0;
-int incision_max = 0;
+int incision = 1;
+int incision_max = 1;
 int detect_count_max = 0;
 
 int blind_line;
@@ -279,11 +280,11 @@ void* realtime_task(void* arg) {
             servo_set_angle(SERVO_MOTOR_MID - turn_angle);
 
             // MEASURE_TIME("realtime_task_cost", {
-            vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
+            // vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
             // vofa_udp.printf("%d,%d,%d,%d\n",distances[40],distances[35], distances[30], distances[25]);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d\n",max_white_column.left_x,max_white_column.right_x,max_white_column.start_y,max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0],counter.drive_in_ramp, flag.found_ramp);
             // vofa_udp.printf("%d,%d,%d\n",abs(max_white_column.left_x - max_white_column.right_x),max_white_column.end_y,distance_middle_line[0][0] - distance_middle_line[20][0]);
-            // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",image_diff,dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0],detect_count_max);
+            // vofa_udp.printf("%d,%d,%d,%d,%d\n",dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0],detect_count_max);
             // vofa_udp.printf("%d,%d,%d,%.3f,%.3f\n",image_diff, flag.drive_in_crossroad, counter.drive_in_crossroad, wheel_turn_pid.Kp, wheel_turn_pid.Kd);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,abs(left_lost_count - right_lost_count),distances[25] - road_distances[25],distances[20] - road_distances[20]);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_left_roundabout,angelZ - icm20948_data.anglez);
@@ -352,12 +353,6 @@ void* realtime_task(void* arg) {
             }
 
             image_diff_process();
-
-            if (switch1()) {
-                dis_index++;
-            }else if (switch2()) {
-                dis_index--;
-            }
 
             if(counter.beep_ms > 0) {
                 counter.beep_ms -= 10;
@@ -641,7 +636,7 @@ void image_diff_process() {
         right_sum = 0;
         int img_start = 0;
         if(img_start < incision)img_start = incision;
-        int img_end = img_start + 40;
+        int img_end = img_start + IMAGE_VALID_NUM;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
             float dec = 4 * max_white_column.left_height - 150;
@@ -659,7 +654,7 @@ void image_diff_process() {
         right_sum = 0;
         int img_start = 0;
         if(img_start < incision)img_start = incision;
-        int img_end = img_start + 40;
+        int img_end = img_start + IMAGE_VALID_NUM;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
             float dec = 4 * max_white_column.left_height - 150;
@@ -675,6 +670,10 @@ void image_diff_process() {
         left_sum *= 10;
         // left_sum += 4000 * cornering;
         image_diff = right_sum - left_sum;
+        if (abs(image_diff - last_diff) > 800) {
+            image_diff = static_cast<int>(0.8 * last_diff + 0.2 * image_diff);
+        }
+        last_diff = image_diff;
     }
     // if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
     // (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
@@ -696,7 +695,7 @@ void image_diff_process() {
 void *non_realtime_task(void *arg) {
     auto atag = mytag("tag36h11", 1.5, 0, 1, false, false);
     cv::Mat gray;
-    cv::Mat gray1ch(60, 80, CV_8UC1, gray_image);
+    cv::Mat gray1ch(60, 80, CV_8UC1, binary_image);
     cv::Mat gray3ch;
     cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
     cv::Mat cv_image3ch;
@@ -739,12 +738,12 @@ void *non_realtime_task(void *arg) {
 
                 vofa_tcp.imwrite(gray3ch);
                 // http << gray3ch;
-        // if (Moto_L.speed < 10 && Moto_R.speed < 10 && flag.start) {
+        if (Moto_L.speed < 10 && Moto_R.speed < 10 && !flag.start) {
             // MEASURE_TIME("UI_time", {
                 UI_key_process();
                 UI_show();
             // });
-        // }
+        }
     }
     return nullptr;
 }
