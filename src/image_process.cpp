@@ -826,14 +826,12 @@ int get_border_line(int detect_count_max) {
             if(left_skip_index == 0){
                 left_skip_index = left_border_index;
             }
-        } else if( (detect_count > 10 && left_x < 4)) {
+        } else if(detect_count > 15 && left_x < 4 && left_y > 32) {
             if(left_skip_index == 0){
                 left_skip_index = left_border_index;
             }
-            if (left_x < 5 && left_y > 30) {
-                flag.left_sec_border = true;
-                counter.right_img_fix = right_border_x - 45;
-            }
+            flag.left_sec_border = true;
+            counter.right_img_fix = right_border_x - 45;
         }else if (left_y < 20){
             if (flaghighl==false)flaghighl=true;
         } else if (left_dir != 3 && binary_image[left_y - 1][left_x + 1] == road_color &&
@@ -898,14 +896,12 @@ int get_border_line(int detect_count_max) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index;
             }
-        } else if((detect_count > 10 && right_x > 76)) {
+        } else if(detect_count > 15 && right_x > 76 && right_y > 32) {
             if(right_skip_index == 0){
                 right_skip_index = right_border_index;
             }
-            if (right_x > 75 && right_y > 30) {
-                flag.right_sec_border = true;
-                counter.left_img_fix = 30 - left_border_x;
-            }
+            flag.right_sec_border = true;
+            counter.left_img_fix = 30 - left_border_x;
         } else if (right_y < 20){
             if (flaghighr==false)flaghighr=true;
         } else if(right_dir != 2 && binary_image[right_y - 1][right_x - 1] == road_color &&
@@ -974,15 +970,16 @@ int get_border_line(int detect_count_max) {
 
     // ¼ÆËãÖÐÏß
     middle_line_index = 0;
-    // if (flag.left_sec_border == false && flag.right_sec_border == false) {
+    if (flag.left_sec_border == false && flag.right_sec_border == false
+        || (counter.left_img_fix < 1 && counter.right_img_fix < 1)) {
         for(int q = 0; q < detect_count_max; q++) {
             middle_line[q][0] = (left_border[q][0] + right_border[q][0]) / 2;
             middle_line[q][1] = (left_border[q][1] + right_border[q][1]) / 2;
             middle_line_index++;
     }
-    // }else {
-    //     // get_border_line_sec(detect_count_max);
-    // }
+    }else {
+        get_border_line_sec(detect_count_max);
+    }
 
     middle_line_single_index = 0;
     int middle_line_current_y = -1;
