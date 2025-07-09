@@ -974,15 +974,15 @@ int get_border_line(int detect_count_max) {
 
     // º∆À„÷–œﬂ
     middle_line_index = 0;
-    if (flag.left_sec_border == false && flag.right_sec_border == false) {
+    // if (flag.left_sec_border == false && flag.right_sec_border == false) {
         for(int q = 0; q < detect_count_max; q++) {
             middle_line[q][0] = (left_border[q][0] + right_border[q][0]) / 2;
             middle_line[q][1] = (left_border[q][1] + right_border[q][1]) / 2;
             middle_line_index++;
-        }
-    }else {
-        get_border_line_sec(detect_count_max);
     }
+    // }else {
+    //     // get_border_line_sec(detect_count_max);
+    // }
 
     middle_line_single_index = 0;
     int middle_line_current_y = -1;
@@ -1115,7 +1115,7 @@ int get_border_line_sec(int detect_count_max) {
                 middle_line[left_border_index][0] = left_x + road_distances[left_y_index] / 2 + static_cast<int>(0.022 * left_y_index * counter.left_img_fix);
                 middle_line[left_border_index][1] = left_y;
             }
-            printf("index:%d,x:%d,y:%d,:y_index:%d,road:%d,mid%d\n",left_border_index,left_x,left_y,left_y_index,road_distances_fix[left_y_index],middle_line[left_border_index][0]);
+            // printf("index:%d,x:%d,y:%d,:y_index:%d,road:%d,mid%d\n",left_border_index,left_x,left_y,left_y_index,road_distances_fix[left_y_index],middle_line[left_border_index][0]);
         }
         left_border_index++;
         left_dirs[left_border_index] = left_dir;

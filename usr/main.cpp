@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 140;
+float speed_base = 120;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -73,7 +73,7 @@ int blind_line;
 int protect = true;
 
 // int running_time = 16500;
-int running_time = 2000;
+int running_time = 1500;
 
 int running_start_time = 0;
 int delay_time = running_time;
@@ -613,10 +613,10 @@ void element_process() {
 
 void element_check() {
     check_crossroad();
-    check_garage();
+    // check_garage();
     // check_ramp();
-    check_obstacle();
-    check_roundabout();
+    // check_obstacle();
+    // check_roundabout();
 }
 
 void image_diff_process() {
@@ -695,7 +695,7 @@ void image_diff_process() {
 void *non_realtime_task(void *arg) {
     auto atag = mytag("tag36h11", 1.5, 0, 1, false, false);
     cv::Mat gray;
-    cv::Mat gray1ch(60, 80, CV_8UC1, binary_image);
+    cv::Mat gray1ch(60, 80, CV_8UC1, gray_image);
     cv::Mat gray3ch;
     cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
     cv::Mat cv_image3ch;
@@ -727,6 +727,9 @@ void *non_realtime_task(void *arg) {
                 tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
+            if (flag.left_sec_border || flag.right_sec_border) {
+                tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0xff, 0xff, 0));
+            }
                 // tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
 
                 cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
