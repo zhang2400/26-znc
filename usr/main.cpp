@@ -73,7 +73,7 @@ int blind_line;
 int protect = true;
 
 // int running_time = 16500;
-int running_time = 1500;
+int running_time = 5000;
 
 int running_start_time = 0;
 int delay_time = running_time;
@@ -169,7 +169,7 @@ void* realtime_task(void* arg) {
             // 定时器中断开始
             // MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
-            printf("Anglez:%f\n", icm20948_data.anglez);
+            // printf("Anglez:%f\n", icm20948_data.anglez);
             // });
 
             // 图像处理
@@ -310,15 +310,15 @@ void* realtime_task(void* arg) {
             // });
 
             // 速度环PID
-            if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
-                speed_setpoint = 120;
-            }else {
-                if(max_white_column.left_height > max_white_column_height) {
-                    speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column_height - max_white_column_height)) / 3.3)));
-                } else {
-                    speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
-                }
-            }
+            // if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
+            //     speed_setpoint = 100;
+            // }else {
+            //     if(max_white_column.left_height > max_white_column_height) {
+            //         speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column_height - max_white_column_height)) / 3.3)));
+            //     } else {
+            //         speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
+            //     }
+            // }
 
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
             // right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
@@ -612,7 +612,7 @@ void element_process() {
 
 
 void element_check() {
-    check_crossroad();
+    // check_crossroad();
     // check_garage();
     // check_ramp();
     // check_obstacle();
@@ -661,11 +661,8 @@ void image_diff_process() {
             if (dec<0) dec=0;
             float y_weight=static_cast<float>(middle_line[i][1])-dec;
             if (y_weight<0) y_weight=0;
-            if (running_time > 4500) {
-                left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f) * (0.8 + (i - (img_end - img_start) / 2) * 0.08);
-            }else {
-                left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight / 20.0f);
-            }
+            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight / 20.0f);
+
         }
         left_sum *= 10;
         // left_sum += 4000 * cornering;
