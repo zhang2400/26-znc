@@ -22,7 +22,6 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
-#include "mytag.h"
 #include "log.h"
 #include "vofa.h"
 #include "config.h"

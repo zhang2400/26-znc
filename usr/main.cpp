@@ -1,4 +1,6 @@
 #include "main.h"
+#include <ncnn/net.h>
+#include <ncnn/mat.h>
 
 float CAR_ANGLE_CONVERT = 3.0f;
 
@@ -752,8 +754,32 @@ void *non_realtime_task(void *arg) {
     cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
     cv::Mat cv_image3ch;
     std::vector<uchar> jpg;
+
+    std::cout << "[ncnn Test] 尝试实例化 ncnn::Net..." << std::endl;
+    ncnn::Net test_net;
+    test_net.opt.use_vulkan_compute = false; // 确保关闭 Vulkan
+    test_net.opt.num_threads = 1;            // 强制单线程
+    std::cout << "[ncnn Test] ncnn::Net 实例化成功，环境完美就绪！" << std::endl;
+
     while (running) {
             cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
+
+            MEASURE_TIME("ncnn input convert", {
+            // 将 OpenCV 的 BGR 数据转换为 ncnn 专属的浮点张量格式 (ncnn::Mat)
+            // 这是每次运行模型前必须要做的操作。
+            // 参数：像素指针, 格式转换类型, 宽, 高
+            ncnn::Mat in = ncnn::Mat::from_pixels(
+                gray3ch.data,
+                ncnn::Mat::PIXEL_BGR2RGB, // 通常模型需要 RGB 输入，这里顺手做了色彩空间转换
+                gray3ch.cols,
+                gray3ch.rows
+            );
+
+            // 如果你想模拟归一化操作 (比如把 0~255 变成 0.0~1.0 减去均值)，可以解开下面这行的注释测试耗时
+            // const float mean_vals[3] = {127.5f, 127.5f, 127.5f};
+            // const float norm_vals[3] = {1.0f/127.5f, 1.0f/127.5f, 1.0f/127.5f};
+            // in.substract_mean_normalize(mean_vals, norm_vals);
+            });
             // fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
