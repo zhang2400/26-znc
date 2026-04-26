@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 25.0f;
+float speed_base = 160.0f;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -20,16 +20,16 @@ float right_speed_setpoint = 0;
 
 float turn_pidout = 0;
 float turn_angle = 0;
-float turn_max = 15;
+float turn_max = 25;
 
-float Kp_max = 0.013f;
-float Kd_max = 0.12f;
+float Kp_max = 0.017f;
+float Kd_max = 0.23f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
 
 // 实时线程相关变量
-const int timer_period = 10;            // 定时器周期(ms)
+constexpr int timer_period = 10;            // 定时器周期(ms)
 std::atomic<bool> running{true};      // 控制线程运行标志
 
 // 图像处理相关变量
@@ -62,7 +62,7 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("10.100.16.26", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("10.100.16.10", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int incision = 1;
@@ -70,10 +70,10 @@ int incision_max = 1;
 int detect_count_max = 0;
 
 int blind_line;
-int protect = true;
+int protect = 0;
 
 // int running_time = 16500;
-int running_time = 50000;
+int running_time = 500000;
 
 int running_start_time = 0;
 int delay_time = running_time;
@@ -95,8 +95,8 @@ double distance = -1;
 
 void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
-    left_wheel_speed_pid = PID_Incremental_Init(20, 4, 2, 6000, -6000, false, 0.25f);
-    right_wheel_speed_pid = PID_Incremental_Init(20, 4, 2, 6000, -6000, false, 0.25f);
+    left_wheel_speed_pid = PID_Incremental_Init(25, 6, 4, 6000, -6000, false, 0.25f);
+    right_wheel_speed_pid = PID_Incremental_Init(25, 6, 4, 6000, -6000, false, 0.25f);
 
     switch_init();
 
@@ -248,8 +248,11 @@ void* realtime_task(void* arg) {
                     wheel_turn_pid.Kd = Kd_max;
                 // }
             }else{
-                wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs(static_cast<double>(image_diff)) / 8000)) + 0.3);
-                wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs(static_cast<double>(image_diff)) / 8000)) + 0.4);
+
+                wheel_turn_pid.Kp = Kp_max;
+                wheel_turn_pid.Kd = Kd_max;
+                // wheel_turn_pid.Kp = Kp_max * (0.7 * (tanh(fabs(static_cast<double>(image_diff)) / 8000)) + 0.3);
+                // wheel_turn_pid.Kd = Kd_max * (0.6 * (tanh(fabs(static_cast<double>(image_diff)) / 8000)) + 0.4);
             }
 
             // 更新电机速度
@@ -293,11 +296,11 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d\n",bottom_start_x,bottom_end_x);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%.2f,%d,%d\n",id,left_lost_count,right_lost_count,distance,flag.found_left_roundabout,flag.found_right_roundabout);
-            vofa_udp.printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout);
+            // vofa_udp.printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout,image_diff);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.1f\n",image_diff,id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
-            // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,c  ounter.found_garage, garage_count,detect_count_max);
+            // vofa_udp.printf("%d,%d,%d,%d\n",flag.found_garage,counter.found_garage, garage_count,detect_count_max);
             // vofa_udp.printf("%d,%d,%.2f,%d\n",image_diff,counter.drive_in_crossroad,turn_angle,counter.drive_in_obstacle);
             // vofa_udp.printf("crossroad:%d,diff%d\n",counter.drive_in_crossroad,image_diff);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
@@ -340,15 +343,12 @@ void* realtime_task(void* arg) {
                     Moto_L.set_speed(0);
                     Moto_R.set_speed(0);
                 }
-                bldc_set_duty(BLDC_DUTY_MIN);
             }else {
                 if(flag.start == true){
                     if(counter.start_motor_delay > MOTO_START_DELAY){
                         Moto_L.set_speed(static_cast<int>(left_wheel_pidout));
                         Moto_R.set_speed(static_cast<int>(right_wheel_pidout));
                     }
-                    if (counter.start_motor_delay > BLDC_START_DELAY)
-                    bldc_set_duty(BLDC_DUTY);
                     counter.start_motor_delay += 10;
                 }
             }
@@ -445,7 +445,7 @@ void element_count() {
         counter.found_garage += 2;
         if (counter.found_garage > 3) {
             BEEP::beep_ms(400);
-            counter.drive_in_garage = 180;
+            counter.drive_in_garage = 300;
         }
     }
 
@@ -614,8 +614,8 @@ void element_process() {
 
 
 void element_check() {
-    // check_crossroad();
-    // check_garage();
+    check_crossroad();
+    check_garage();
     // check_ramp();
     // check_obstacle();
     // check_roundabout();
@@ -659,20 +659,11 @@ void image_diff_process() {
         int img_end = img_start + IMAGE_VALID_NUM;
         if(img_end > detect_count_max) img_end = detect_count_max;
         for(int i = img_start; i < img_end; i++) {
-            float dec = 4 * max_white_column.left_height - 150;
-            if (dec<0) dec=0;
-            float y_weight=static_cast<float>(middle_line[i][1])-dec;
-            if (y_weight<0) y_weight=0;
-            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight / 20.0f);
-
+            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE);
         }
         left_sum *= 10;
         // left_sum += 4000 * cornering;
         image_diff = right_sum - left_sum;
-        if (abs(image_diff - last_diff) > 800) {
-            image_diff = static_cast<int>(0.8 * last_diff + 0.2 * image_diff);
-        }
-        last_diff = image_diff;
     }
     // if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
     // (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
@@ -692,9 +683,8 @@ void image_diff_process() {
 
 // 非实时任务线程函数
 void *non_realtime_task(void *arg) {
-    auto atag = mytag("tag36h11", 1.5, 0, 1, false, false);
     cv::Mat gray;
-    cv::Mat gray1ch(60, 80, CV_8UC1, gray_image);
+    cv::Mat gray1ch(60, 80, CV_8UC1, gray_binary_image);
     cv::Mat gray3ch;
     cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
     cv::Mat cv_image3ch;

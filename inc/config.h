@@ -77,7 +77,7 @@ extern "C" {
 #define BLDC_START_DELAY            (1000)
 #define MOTO_START_DELAY            (2000)
 
-#define IMAGE_VALID_NUM             (40)
+#define IMAGE_VALID_NUM             (50)
 
 #ifdef __cplusplus
 }

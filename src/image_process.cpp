@@ -326,6 +326,7 @@ int check_crossroad(){
         flag.found_crossroad = true;
         counter.drive_in_left_roundabout = 0;
         counter.drive_in_right_roundabout = 0;
+        std::cout << "found crossroad" << std::endl;
         return true;
     }
     return false;
@@ -420,18 +421,18 @@ int check_garage() {
     int start_y;
     int end_y;
     flag.found_garage = false;
-    start_y = 40;
-    end_y = 25;
+    start_y = 45;
+    end_y = 20;
     int _bottom_start_x = bottom_start_x;
     int _bottom_end_x = bottom_end_x;
-    if(_bottom_end_x - _bottom_start_x < 35){
-        _bottom_start_x = 17;
-        _bottom_end_x = 77;
-    }
+    // if(_bottom_end_x - _bottom_start_x < 35){
+    //     _bottom_start_x = 17;
+    //     _bottom_end_x = 77;
+    // }
     for(int i = start_y; i > end_y; i--) {
         for (int j = _bottom_start_x; j < _bottom_end_x; j++) {
             if (gray_binary_image[i][j] == 0) {
-                if (flag_next == 0 && distance > 0 && distance < 5) {
+                if (flag_next == 0 && distance > 0 && distance < 4) {
                     garage_count++;
                     flag_next = 1;
                 }
@@ -444,6 +445,7 @@ int check_garage() {
     }
     if(garage_count > 25){
         flag.found_garage = true;
+        std::cout<<"found garage count:"<<garage_count<<std::endl;
     }
     return flag.found_garage;
 }
@@ -835,7 +837,7 @@ int get_border_line(int detect_count_max) {
             }
             flag.left_sec_border = true;
             counter.right_img_fix = right_border_x - 40;
-        }else if (left_y < 20){
+        }else if (left_y < 10){
             if (flaghighl==false)flaghighl=true;
         } else if (left_dir != 3 && binary_image[left_y - 1][left_x + 1] == road_color &&
                    binary_image[left_y - 1][left_x] == border_color){  // 右上黑，方向3，正上白
@@ -909,7 +911,7 @@ int get_border_line(int detect_count_max) {
             }
             flag.right_sec_border = true;
             counter.left_img_fix = 40 - left_border_x;
-        } else if (right_y < 20){
+        } else if (right_y < 10){
             if (flaghighr==false)flaghighr=true;
         } else if(right_dir != 2 && binary_image[right_y - 1][right_x - 1] == road_color &&
                   binary_image[right_y - 1][right_x] == border_color) {  // 左上黑，方向2，正上白
