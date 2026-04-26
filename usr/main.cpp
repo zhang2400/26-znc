@@ -12,7 +12,7 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 120;
+float speed_base = 25.0f;
 float boost_ratio = 0.15f;
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -62,7 +62,7 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("192.168.5.16", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("10.100.16.26", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 
 int incision = 1;
@@ -73,15 +73,15 @@ int blind_line;
 int protect = true;
 
 // int running_time = 16500;
-int running_time = 5000;
+int running_time = 50000;
 
 int running_start_time = 0;
 int delay_time = running_time;
 int stop_in_garage = true;
 
 BEEP beep(GPIO61);
-Moto Moto_R(PWM2_GPIO66, 74, PWM0_GPIO64, 73, true);
-Moto Moto_L(PWM1_GPIO65, 75, PWM3_GPIO67, 72, false);
+Moto Moto_L(PWM1_GPIO65, 72, PWM0_GPIO64, 51, false);
+Moto Moto_R(PWM2_GPIO66, 73,PWM3_GPIO67 , 50, true);
 
 // 获取PWM驱动信息
 struct pwm_info servo_pwm_info;
@@ -95,14 +95,14 @@ double distance = -1;
 
 void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
-    left_wheel_speed_pid = PID_Incremental_Init(30, 6, 2, 6000, -6000, false, 0.25f);
-    right_wheel_speed_pid = PID_Incremental_Init(30, 6, 2, 6000, -6000, false, 0.25f);
+    left_wheel_speed_pid = PID_Incremental_Init(20, 4, 2, 6000, -6000, false, 0.25f);
+    right_wheel_speed_pid = PID_Incremental_Init(20, 4, 2, 6000, -6000, false, 0.25f);
 
     switch_init();
 
-    tft180_init("/dev/fb0");
+    // tft180_init("/dev/fb0");
 
-    ret1 = icm20948_i2c_bus_init(icm20948, "/dev/i2c-1", 0x68);
+    ret1 = icm20948_i2c_bus_init(icm20948, "/dev/i2c-0", 0x68);
     ret2 = icm20948_configure(icm20948, ACCE_FS_8G, GYRO_FS_2000DPS);
 
     InitLookupTable();
@@ -141,7 +141,7 @@ void* realtime_task(void* arg) {
     result_image = cv::Mat(60, 80, CV_8UC1);
     pwm_get_dev_info(SERVO_MOTOR_PWM, &servo_pwm_info);
 
-    UI_init();
+    // UI_init();
     BEEP::beep_ms(200);
 
     if(ret1 != 0) goto OUT;
@@ -183,6 +183,7 @@ void* realtime_task(void* arg) {
             memcpy(gray_image, myframe.data, 80 * 60);
             ImagePerspective();
             cover_car_head_pers();
+            cover_car_head();
             calculate_contrast_x8(reinterpret_cast<uint8_t *>(contrast_image), reinterpret_cast<const uint8_t *>(gray_image), 80, 60);
             memcpy((uint8_t *) binary_image, (const uint8_t *) contrast_image, 80 * 60);
             // MEASURE_TIME("rt task", {
@@ -277,7 +278,7 @@ void* realtime_task(void* arg) {
                 right_speed_setpoint -= diff;
             }
 
-            servo_set_angle(SERVO_MOTOR_MID - turn_angle);
+            // servo_set_angle(SERVO_MOTOR_MID - turn_angle);
 
             // MEASURE_TIME("realtime_task_cost", {
             // vofa_udp.printf("%d,%d,%d\n",Moto_L.speed,Moto_R.speed,blind_line);
@@ -292,7 +293,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d\n",bottom_start_x,bottom_end_x);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%.2f,%d,%d\n",id,left_lost_count,right_lost_count,distance,flag.found_left_roundabout,flag.found_right_roundabout);
-            // vofa_udp.printf("%f,%f,%d,%d,%.2f,%.2f\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout);
+            vofa_udp.printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.1f\n",image_diff,id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,middle_line[60-lost_y1][0], middle_line[60-lost_y1][1]);
@@ -332,8 +333,8 @@ void* realtime_task(void* arg) {
                 left_speed_setpoint = 0;
                 right_speed_setpoint = 0;
                 if(counter.start_motor_delay > 0){
-                    Moto_L.set_speed(-static_cast<int>(left_wheel_pidout));
-                    Moto_R.set_speed(-static_cast<int>(right_wheel_pidout));
+                    Moto_L.set_speed(static_cast<int>(left_wheel_pidout));
+                    Moto_R.set_speed(static_cast<int>(right_wheel_pidout));
                     counter.start_motor_delay -= 10;
                 } else {
                     Moto_L.set_speed(0);
@@ -343,14 +344,15 @@ void* realtime_task(void* arg) {
             }else {
                 if(flag.start == true){
                     if(counter.start_motor_delay > MOTO_START_DELAY){
-                        Moto_L.set_speed(-static_cast<int>(left_wheel_pidout));
-                        Moto_R.set_speed(-static_cast<int>(right_wheel_pidout));
+                        Moto_L.set_speed(static_cast<int>(left_wheel_pidout));
+                        Moto_R.set_speed(static_cast<int>(right_wheel_pidout));
                     }
                     if (counter.start_motor_delay > BLDC_START_DELAY)
                     bldc_set_duty(BLDC_DUTY);
                     counter.start_motor_delay += 10;
                 }
             }
+
 
             image_diff_process();
 
@@ -524,7 +526,7 @@ void element_count() {
         counter.drive_in_right_roundabout -= 10;
         counter.drive_in_right_roundabout -= (counter.drive_in_right_roundabout % 10);
     }
-    // vofa_udp.printf("lr:%d,rr:%d,dis:%.2f,bs:%d,be:%d\n",counter.drive_in_left_roundabout,counter.drive_in_right_roundabout,distance,bottom_start_x,bottom_end_x);
+    // vofa_udp.printf("anglez:%.2f\n",icm20948_data.anglez);
 
 }
 
@@ -705,22 +707,22 @@ void *non_realtime_task(void *arg) {
                 // memcpy(gray1ch_image,gray_image, 80 * 60);
                 // memcpy(gray1ch_image, binary_image, 80 * 60);
             // });
-
-                atag.detect(gray);
-            // });
-            // MEASURE_TIME("getclosettagindex", {
-                atag.getClosetTagIndex();
-            // });
-            // MEASURE_TIME("draw", {
-                atag.draw(gray3ch, 0.25);
-            // });detect_count_max:
-            // MEASURE_TIME("getid", {
-                id = atag.getClosetTagID();
-            // });
-            // MEASURE_TIME("getdistance", {
-                distance = atag.getClosetTagDistance(1500);
-                // cv::putText(gray3ch, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
-            // });
+            //
+            //     atag.detect(gray);
+            // // });
+            // // MEASURE_TIME("getclosettagindex", {
+            //     atag.getClosetTagIndex();
+            // // });
+            // // MEASURE_TIME("draw", {
+            //     atag.draw(gray3ch, 0.25);
+            // // });detect_count_max:
+            // // MEASURE_TIME("getid", {
+            //     id = atag.getClosetTagID();
+            // // });
+            // // MEASURE_TIME("getdistance", {
+            //     distance = atag.getClosetTagDistance(1500);
+            //     // cv::putText(gray3ch, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
+            // // });
                 tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
@@ -741,7 +743,7 @@ void *non_realtime_task(void *arg) {
         if (Moto_L.speed < 10 && Moto_R.speed < 10 && !flag.start) {
             // MEASURE_TIME("UI_time", {
                 UI_key_process();
-                UI_show();
+                // UI_show();
             // });
         }
     }
@@ -749,7 +751,11 @@ void *non_realtime_task(void *arg) {
 }
 
 void signal_handler(int sig) {
+    Moto_L.set_speed(0);
+    Moto_R.set_speed(0);
     running = false;
+    Moto_L.set_speed(0);
+    Moto_R.set_speed(0);
     g_signal_received = sig;
     log_shutdown();
 }

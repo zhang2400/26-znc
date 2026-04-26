@@ -8,10 +8,8 @@
 #include "GPIO.h"
 
 #define DIP_SWITCH_1 (!dip_switch_1.readValue())
-#define DIP_SWITCH_2 (!dip_switch_2.readValue())
-#define DIP_SWITCH_3 (!dip_switch_3.readValue())
 
-#define DIP_SWITCH   ((DIP_SWITCH_1) | (DIP_SWITCH_2) << 1 | (DIP_SWITCH_3) << 2)
+#define DIP_SWITCH   (DIP_SWITCH_1)
 
 #define SWITCH_1 (!switch_1.readValue())
 #define SWITCH_2 (!switch_2.readValue())

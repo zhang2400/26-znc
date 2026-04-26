@@ -25,7 +25,7 @@ void InitLookupTable(void) {
             }
         }
     }
-    printf("Init successfully");
+    printf("Init successfully\n");
 }
 
 // 直接查表

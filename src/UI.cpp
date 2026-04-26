@@ -453,6 +453,7 @@ void UI_key_process(){
         flag.start = true;
         // running_start_time = system_getval_ms();
         counter.beep_ms = 300;
+        std::cout << "car started" << std::endl;
     } else if(!KEY_BACK && key_back_pressed){
         key_back_pressed = 0;
     }

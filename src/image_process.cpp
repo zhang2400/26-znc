@@ -978,7 +978,7 @@ int get_border_line(int detect_count_max) {
     }
     detect_count_max = detect_count;
 
-    printf("%d,%d,%d,%d\r\n",flag.left_sec_border,flag.right_sec_border,counter.skip_left_border,counter.skip_right_border);
+    // printf("%d,%d,%d,%d\r\n",flag.left_sec_border,flag.right_sec_border,counter.skip_left_border,counter.skip_right_border);
     // º∆À„÷–œﬂ
     middle_line_index = 0;
     if (flag.left_sec_border == false && flag.right_sec_border == false
@@ -1621,8 +1621,8 @@ void tcp_draw_real_border_line(cv::Mat& image, int x, int y, const uint8_t line[
 }
 
 void cover_car_head(){
-    for(int x = 40; x < 60; x++){
-        for(int y = 50; y < 60; y++){
+    for(int x = 30; x < 53; x++){
+        for(int y = 47; y < 60; y++){
             gray_image[y][x] = gray_image[y-1][x];
         }
     }

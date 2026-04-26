@@ -17,8 +17,8 @@ public:
     ~Moto();
     void set_speed(int duty);
     void update_speed();
-    int32 speed;
-    int32 last_speed;
+    float speed;
+    float last_speed;
 private:
     bool inverse;
     PWM motor;

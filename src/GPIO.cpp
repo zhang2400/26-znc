@@ -14,7 +14,7 @@
 GPIO::GPIO(int gpioNum_) : gpioNum(gpioNum_), fd(-1)
 {
     gpioPath = "/sys/class/gpio/gpio" + std::to_string(gpioNum);
-
+    std::cout << "export:" << gpioNum << std::endl;
     // 导出 GPIO
     if (!writeToFile("/sys/class/gpio/export", std::to_string(gpioNum)))
     {

@@ -4,14 +4,12 @@
 
 #include "switch.h"
 
-GPIO switch_1(GPIO13);
-GPIO switch_2(GPIO14);
-GPIO switch_3(GPIO15);
-GPIO switch_4(GPIO16);
+GPIO switch_1(GPIO42);
+GPIO switch_2(GPIO44);
+GPIO switch_3(GPIO43);
+GPIO switch_4(GPIO61);
 
-GPIO dip_switch_1(GPIO20);
-GPIO dip_switch_2(GPIO21);
-GPIO dip_switch_3(GPIO22);
+GPIO dip_switch_1(GPIO74);
 
 void switch_init()
 {
@@ -21,8 +19,6 @@ void switch_init()
     switch_4.setDirection("in");
 
     dip_switch_1.setDirection("in");
-    dip_switch_2.setDirection("in");
-    dip_switch_3.setDirection("in");
 }
 
 int dip_switch(){
