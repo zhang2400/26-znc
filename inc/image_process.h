@@ -61,16 +61,16 @@ extern int x_left;
 extern int x_right;
 extern int garage_count;
 
-extern uint8_t left_border[100][2];  // ×ó±ß½ç
-extern uint8_t right_border[100][2];  // ÓÒ±ß½ç
-extern uint8_t middle_line[100][2];  // ÖÐÏß
-extern uint8_t middle_line_single[100][2];  // ÖÐÏßµ¥Y
-extern uint8_t left_border_pers[100][2];  // ×ó±ß½ç
-extern uint8_t right_border_pers[100][2];  // ÓÒ±ß½ç
-extern uint8_t middle_line_pers[100][2];  // ÖÐÏß
-extern uint8_t middle_line_single_pers[100][2];  // ÖÐÏßµ¥Y
-extern uint8_t left_border_single[100][2];  // ×ó±ß½çµ¥Y
-extern uint8_t right_border_single[100][2];  // ÓÒ±ß½çµ¥Y
+extern uint8_t left_border[100][2];  // ï¿½ï¿½ß½ï¿½
+extern uint8_t right_border[100][2];  // ï¿½Ò±ß½ï¿½
+extern uint8_t middle_line[100][2];  // ï¿½ï¿½ï¿½ï¿½
+extern uint8_t middle_line_single[100][2];  // ï¿½ï¿½ï¿½ßµï¿½Y
+extern uint8_t left_border_pers[100][2];  // ï¿½ï¿½ß½ï¿½
+extern uint8_t right_border_pers[100][2];  // ï¿½Ò±ß½ï¿½
+extern uint8_t middle_line_pers[100][2];  // ï¿½ï¿½ï¿½ï¿½
+extern uint8_t middle_line_single_pers[100][2];  // ï¿½ï¿½ï¿½ßµï¿½Y
+extern uint8_t left_border_single[100][2];  // ï¿½ï¿½ß½çµ¥Y
+extern uint8_t right_border_single[100][2];  // ï¿½Ò±ß½çµ¥Y
 extern uint8_t left_distance[100][2];
 extern uint8_t right_distance[100][2];
 extern uint8_t left_distance_pers[100][2];
@@ -92,15 +92,15 @@ extern uint8_t    binary_image_bak[60][80];
 extern uint8_t    contrast_image[60][80];
 extern uint8_t    gray_binary_image[60][80];
 
-// KalmanÂË²¨Æ÷½á¹¹Ìå£¨Ã¿¸ö×ø±êÖá¶ÀÁ¢ÂË²¨£©
+// Kalmanï¿½Ë²ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½å£¨Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½
 typedef struct {
-    float x_est;   // ×´Ì¬¹À¼Æ
-    float P;       // Îó²îÐ­·½²î
-    float Q;       // ¹ý³ÌÔëÉù (ÏµÍ³²»È·¶¨ÐÔ)
-    float R;       // ¹Û²âÔëÉù (²âÁ¿²»È·¶¨ÐÔ)
+    float x_est;   // ×´Ì¬ï¿½ï¿½ï¿½ï¿½
+    float P;       // ï¿½ï¿½ï¿½Ð­ï¿½ï¿½ï¿½ï¿½
+    float Q;       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ÏµÍ³ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½)
+    float R;       // ï¿½Û²ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½)
 } KalmanFilter;
 
-// È«¾ÖÂË²¨Æ÷ÊµÀý£¨×ó±ß½çx/y£¬ÓÒ±ß½çx/y£©
+// È«ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½x/yï¿½ï¿½ï¿½Ò±ß½ï¿½x/yï¿½ï¿½
 extern KalmanFilter kf_left_x, kf_left_y;
 extern KalmanFilter kf_right_x, kf_right_y;
 
@@ -134,13 +134,13 @@ int check_obstacle();
 
 int check_garage();
 
-void erase_top_left_road(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
+void erase_top_left_road(int16_t x1, int16_t y1, int16_t x2, int16_t y2);
 
-void erase_top_right_road(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
+void erase_top_right_road(int16_t x1, int16_t y1, int16_t x2, int16_t y2);
 
-void fix_left_break(uint16_t y1, uint16_t y2);
+void fix_left_break(int16_t y1, int16_t y2);
 
-void fix_right_break(uint16_t y1, uint16_t y2);
+void fix_right_break(int16_t y1, int16_t y2);
 
 void fix_crossroad();
 

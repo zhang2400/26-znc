@@ -162,12 +162,12 @@ void* realtime_task(void* arg) {
             // fprintf(stdout,"timer_event 距离上次事件%.2lfms\n", time_used.count() * 1000);
             LOGI("timer_event", "距离上次事件%.2lfms", time_used.count() * 1000);
             if(std::abs(time_used.count() * 1000 - timer_period) > 1) {
-                // fprintf(stdout,"timer_event 定时器周期不准确，误差: %.2lfms\n", time_used.count() * 1000 - timer_period);
-                LOGW("timer_event", "`定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
+                fprintf(stdout,"timer_event 定时器周期不准确，误差: %.2lfms\n", time_used.count() * 1000 - timer_period);
+                // LOGW("timer_event", "`定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
 
             // 定时器中断开始
-            // MEASURE_TIME("realtime_task_cost", {
+            MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
             // printf("Anglez:%f\n", icm20948_data.anglez);
             // });
@@ -209,7 +209,8 @@ void* realtime_task(void* arg) {
             // get_max_middle_line_height();
 
             incision = incision_max;
-            max_white_column_get(bottom_start_x > 10 ? bottom_start_x : 10, 1, bottom_end_x < 64 ? bottom_end_x : 64 , 59);
+            max_white_column_get(bottom_start_x > 30 ? bottom_start_x : 30, 1, bottom_end_x < 50 ? bottom_end_x : 50 , 59);
+            // max_white_column_get(bottom_start_x > 20 ? bottom_start_x : 20, 1, bottom_end_x < 20 ? bottom_end_x : 20 , 59);
 
             get_distance_line();
             get_lost_count();
@@ -271,14 +272,17 @@ void* realtime_task(void* arg) {
             if(turn_angle_real == 0) {
                 left_speed_setpoint = speed_setpoint;
                 right_speed_setpoint = speed_setpoint;
-            }
-            else {
+            } else {
                 left_speed_setpoint = fabs(speed_setpoint * (((CAR_WHEELBASE_L / tan(turn_angle_real)) + (CAR_WHEELBASE_B / 2)) / sqrt(pow(CAR_WHEELBASE_L / 2, 2) + pow(CAR_WHEELBASE_L / tan(turn_angle_real), 2))));
                 right_speed_setpoint = fabs(speed_setpoint * (((CAR_WHEELBASE_L / tan(turn_angle_real)) - (CAR_WHEELBASE_B / 2)) / sqrt(pow(CAR_WHEELBASE_L / 2, 2) + pow(CAR_WHEELBASE_L / tan(turn_angle_real), 2))));
 
                 double diff = (left_speed_setpoint > speed_setpoint) ? (left_speed_setpoint - speed_setpoint) : (right_speed_setpoint - speed_setpoint);
                 left_speed_setpoint -= diff;
                 right_speed_setpoint -= diff;
+            }
+            if (counter.start_motor_delay > MOTO_START_DELAY && counter.start_motor_delay < MOTO_START_DELAY+500) {
+                left_speed_setpoint = speed_setpoint/2;
+                right_speed_setpoint = speed_setpoint/2;
             }
 
             // servo_set_angle(SERVO_MOTOR_MID - turn_angle);
@@ -295,7 +299,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",dis_index,left_border[dis_index][0],right_border[dis_index][0],left_border[dis_index][1],right_border[dis_index][1]);
             // vofa_udp.printf("%d,%d\n",bottom_start_x,bottom_end_x);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
-            // vofa_udp.printf("%d,%d,%d,%.2f,%d,%d\n",id,left_lost_count,right_lost_count,distance,flag.found_left_roundabout,flag.found_right_roundabout);
+            vofa_udp.printf("%d,%d,%d,%d\n",left_lost_count,right_lost_count,flag.found_left_roundabout,flag.found_right_roundabout);
             // vofa_udp.printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d\n",left_speed_setpoint,right_speed_setpoint, Moto_L.speed, Moto_R.speed,left_wheel_pidout,right_wheel_pidout,image_diff);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.1f\n",image_diff,id,left_lost_count,right_lost_count,rstate,counter.drive_in_right_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,x_left,x_right,left_reach_edge,right_reach_edge);
@@ -348,6 +352,17 @@ void* realtime_task(void* arg) {
                     if(counter.start_motor_delay > MOTO_START_DELAY){
                         Moto_L.set_speed(static_cast<int>(left_wheel_pidout));
                         Moto_R.set_speed(static_cast<int>(right_wheel_pidout));
+                    } else {
+                        left_wheel_speed_pid.error = 0;
+                        left_wheel_speed_pid.last_error = 0;
+                        left_wheel_speed_pid.last_last_error = 0;
+                        left_wheel_speed_pid.last_out = 0;
+                        left_wheel_speed_pid.out = 0;
+                        right_wheel_speed_pid.error = 0;
+                        right_wheel_speed_pid.last_error = 0;
+                        right_wheel_speed_pid.last_last_error = 0;
+                        right_wheel_speed_pid.last_out = 0;
+                        right_wheel_speed_pid.out = 0;
                     }
                     counter.start_motor_delay += 10;
                 }
@@ -408,6 +423,7 @@ void* realtime_task(void* arg) {
             if (running_time > 0 && flag.start && counter.start_motor_delay > MOTO_START_DELAY) {
                 running_time -= 10;
             }
+            });
         }
     }
             // 定时器中断结束
@@ -494,7 +510,7 @@ void element_count() {
     // 左环岛计数处理
     if(flag.found_left_roundabout && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0 && counter.drive_in_ramp == 0) {
         counter.found_left_roundabout += 2;
-        if(counter.found_left_roundabout > 3){
+        if(counter.found_left_roundabout > 11){
             BEEP::beep_ms(200);
             counter.drive_in_left_roundabout = 10000;
         }
@@ -512,7 +528,7 @@ void element_count() {
     // 右环岛计数处理
     if(flag.found_right_roundabout && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0 && counter.drive_in_ramp == 0) {
         counter.found_right_roundabout += 2;
-        if(counter.found_right_roundabout > 3){
+        if(counter.found_right_roundabout > 11){
             BEEP::beep_ms(200);
             counter.drive_in_right_roundabout = 10000;
         }
@@ -531,6 +547,7 @@ void element_count() {
 }
 
 void element_process() {
+    int count=0;
     // 十字
     if (counter.drive_in_crossroad > 50) {
         // if (counter.drive_in_crossroad > 50) {
@@ -561,51 +578,97 @@ void element_process() {
         }
     }
 
-    // 左环岛
-    if (counter.drive_in_left_roundabout > 5001) {
-        fix_left_break(0,60);
-        if (distance != -1) {
-            counter.drive_in_left_roundabout = static_cast<float>(5.0f * distance + 4800);
+    // 环岛
+    count = 0;
+    for (int q = 80 / 2 - 1; q >= 0; q--) {
+        if (binary_image_bak[50][q] == 0) {
+            count++;
+        } else {
+            break;
         }
+    }
+
+    // 左环岛
+    if (counter.drive_in_left_roundabout > 8600) {
+        count = 0;
+        for (int q = 80 / 2 - 1; q >= 0; q--) {
+            if (binary_image_bak[50][q] == 0) {
+                count++;
+            } else {
+                break;
+            }
+        }
+        if (rstate == 0 && count > 35) {
+            rstate = 1;
+        }
+        if((rstate == 1 && count < 31) || count < 5){
+            rstate = 0;
+            counter.drive_in_left_roundabout = 5000;
+            angelZ = icm20948_data.anglez;
+        }
+        fix_left_break(0, 60);
+    } else if(counter.drive_in_left_roundabout > 5000){
+        rstate = 0;
+        counter.drive_in_left_roundabout = 5000;
         angelZ = icm20948_data.anglez;
-    }else if(counter.drive_in_left_roundabout > 100) {
-        int end_x = 79;
-        if(angelZ - icm20948_data.anglez > -100) {
-            erase_top_right_road(end_x - 55, 5, end_x, 60);
-        } else if(angelZ - icm20948_data.anglez > -320){
-            erase_top_right_road(end_x - 55, 5, end_x, 60);
-            counter.drive_in_left_roundabout = 500;
+        fix_left_break(0, 60);
+    } else if(counter.drive_in_left_roundabout > 100){
+        int end_x = bottom_end_x;
+        if(end_x < road_distances[0]) end_x = road_distances[0];
+        if(end_x > 78) end_x = 78;
+        if(icm20948_data.anglez - angelZ < 60) {
+            erase_top_right_road(end_x - road_distances[15], 0, end_x, 60);
+        } else if(icm20948_data.anglez - angelZ < 320){
+            erase_top_right_road(end_x - road_distances[30], 0, end_x, 60);
+            counter.drive_in_left_roundabout = 800;
         } else if(counter.drive_in_left_roundabout > 300){
             fix_left_break(0, 60);
-            BEEP::beep_ms(200);
         } else if(counter.drive_in_left_roundabout > 100){
             fix_left_break(0, 60);
-            if(distances[10] < road_distances[10]){
+            if(distances[0] < road_distances[0] + 5){
                 counter.drive_in_left_roundabout = 100;
             }
         }
     }
 
     // 右环岛
-    if (counter.drive_in_right_roundabout > 5001) {
-        fix_right_break(0,60);
-        if (distance != -1) {
-            counter.drive_in_right_roundabout = static_cast<float>(5.0f * distance + 4850);
+    if (counter.drive_in_right_roundabout > 8600){
+        count = 0;
+        for (int q = 80 / 2 - 1; q < 80; q++) {
+            if (binary_image_bak[50][q] == 0) {
+                count++;
+            } else {
+                break;
+            }
         }
+        if (rstate == 0 && count > 35) {
+            rstate = 1;
+        }
+        if(rstate == 1 && count < 31 || count < 5){
+            rstate = 0;
+            counter.drive_in_right_roundabout = 5000;
+            angelZ = icm20948_data.anglez;
+        }
+        fix_right_break(0, 60);
+    } else if(counter.drive_in_right_roundabout > 5000){
+        rstate = 0;
+        counter.drive_in_right_roundabout = 5000;
+        fix_right_break(0, 60);
         angelZ = icm20948_data.anglez;
-    }else if(counter.drive_in_right_roundabout > 100) {
-        int start_x = 0;
-        if(angelZ - icm20948_data.anglez < 100) {
-            erase_top_left_road(start_x + 45, 5, start_x, 60);
-        } else if(angelZ - icm20948_data.anglez < 320) {
-            erase_top_left_road(start_x + 55, 5, start_x, 60);
-            counter.drive_in_right_roundabout = 500;
+    } else if(counter.drive_in_right_roundabout > 100){
+        int start_x = bottom_start_x;
+        if(start_x > 80 - road_distances[0]) start_x = 80 - road_distances[0];
+        if(start_x < 1) start_x = 1;
+        if(icm20948_data.anglez - angelZ > -60) {
+            erase_top_left_road(start_x + road_distances[15], 0, start_x, 60);
+        } else if(icm20948_data.anglez - angelZ > -320) {
+            erase_top_left_road(start_x + road_distances[30], 0, start_x, 60);
+            counter.drive_in_right_roundabout = 800;
         } else if(counter.drive_in_right_roundabout > 300){
-            fix_right_break(0,45);
-            BEEP::beep_ms(200);
+            fix_right_break(0, 60);
         } else if(counter.drive_in_right_roundabout > 100) {
-            fix_right_break(0, 45);
-            if (distances[10] < road_distances[10]) {
+            fix_right_break(0, 60);
+            if (distances[0] < road_distances[0] + 5) {
                 counter.drive_in_right_roundabout = 100;
             }
         }
@@ -618,7 +681,7 @@ void element_check() {
     check_garage();
     // check_ramp();
     // check_obstacle();
-    // check_roundabout();
+    check_roundabout();
 }
 
 void image_diff_process() {
@@ -629,9 +692,9 @@ void image_diff_process() {
         for(int i = 0; i < distance_middle_line_index; i++){
             float y_weight= 60 - distance_middle_line[i][1];
             if (y_weight<0) y_weight=0;
-            left_sum -= static_cast<float>(distance_middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
+            left_sum -= static_cast<float>(distance_middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/15.0f);
         }
-        left_sum *= 15;
+        left_sum *= 10;
         image_diff = right_sum - left_sum;
     }else if(counter.drive_in_obstacle > 0) {
         left_sum = 0;
@@ -684,7 +747,7 @@ void image_diff_process() {
 // 非实时任务线程函数
 void *non_realtime_task(void *arg) {
     cv::Mat gray;
-    cv::Mat gray1ch(60, 80, CV_8UC1, gray_binary_image);
+    cv::Mat gray1ch(60, 80, CV_8UC1, binary_image);
     cv::Mat gray3ch;
     cv::Mat cv_image(60, 40, CV_8UC1, gray_pers_image); // 60行40列的灰度图
     cv::Mat cv_image3ch;
@@ -716,18 +779,20 @@ void *non_realtime_task(void *arg) {
                 tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
                 tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
-            if (flag.left_sec_border || flag.right_sec_border) {
-                tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0xff, 0xff, 0));
+            if (counter.drive_in_crossroad>0) {
+                tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
             }
                 // tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
+                cv::circle(gray3ch, cv::Point(lost_x1, lost_y1), 0, cv::Scalar(255, 0, 255), -1);
+                cv::circle(gray3ch, cv::Point(lost_x2, lost_y2), 0, cv::Scalar(255, 0, 255), -1);
+                std::string info_text = "C:" + std::to_string(counter.drive_in_crossroad);
+                cv::putText(gray3ch, info_text, cv::Point(2, 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 255, 255), 1);
+                // cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
+                // tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
+                // tcp_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
+                // tcp_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
 
-                cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
-                tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
-                tcp_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
-                tcp_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
-            // MEASURE_TIME("http write", {
-                // vofa_tcp.imwrite(cv_image3ch);
-
+            // MEASURE_TIME("image write", {
                 vofa_tcp.imwrite(gray3ch);
                 // http << gray3ch;
         if (Moto_L.speed < 10 && Moto_R.speed < 10 && !flag.start) {
