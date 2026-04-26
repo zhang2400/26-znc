@@ -769,16 +769,12 @@ void *non_realtime_task(void *arg) {
             // 这是每次运行模型前必须要做的操作。
             // 参数：像素指针, 格式转换类型, 宽, 高
             ncnn::Mat in = ncnn::Mat::from_pixels(
-                gray3ch.data,
-                ncnn::Mat::PIXEL_BGR2RGB, // 通常模型需要 RGB 输入，这里顺手做了色彩空间转换
-                gray3ch.cols,
-                gray3ch.rows
+                gray1ch.data,            // 直接喂单通道的指针
+                ncnn::Mat::PIXEL_GRAY,   // 关键：指定为纯灰度格式
+                gray1ch.cols,
+                gray1ch.rows
             );
 
-            // 如果你想模拟归一化操作 (比如把 0~255 变成 0.0~1.0 减去均值)，可以解开下面这行的注释测试耗时
-            // const float mean_vals[3] = {127.5f, 127.5f, 127.5f};
-            // const float norm_vals[3] = {1.0f/127.5f, 1.0f/127.5f, 1.0f/127.5f};
-            // in.substract_mean_normalize(mean_vals, norm_vals);
             });
             // fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
