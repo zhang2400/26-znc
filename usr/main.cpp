@@ -15,7 +15,7 @@ float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
 float speed_base = 200.0f; //基础速度
-float boost_ratio = 0.0f; // 直道加速比率
+float boost_ratio = 0.2f; // 直道加速比率
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
@@ -319,15 +319,15 @@ void* realtime_task(void* arg) {
             // });
 
             // 速度环PID
-            // if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
-            //     speed_setpoint = 180;
-            // }else {
-            //     if(max_white_column.left_height > max_white_column_height) {
-            //         speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column_height - max_white_column_height)) / 3.3)));
-            //     } else {
-            //         speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
-            //     }
-            // }
+            if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
+                speed_setpoint = 180;
+            }else {
+                if(max_white_column.left_height > max_white_column_height) {
+                    speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column_height - max_white_column_height)) / 3.3)));
+                } else {
+                    speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
+                }
+            }
 
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
             // right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
@@ -496,7 +496,7 @@ void element_count() {
         counter.found_obstacle += 2;
         if (counter.found_obstacle > 5) {
             BEEP::beep_ms(200);
-            counter.drive_in_obstacle = 700;
+            counter.drive_in_obstacle = 1000;
         }
     }
 

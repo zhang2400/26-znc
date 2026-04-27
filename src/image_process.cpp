@@ -443,7 +443,7 @@ int check_garage() {
             }
         }
     }
-    if(garage_count > 25){
+    if(garage_count > 35){
         flag.found_garage = true;
         std::cout<<"found garage count:"<<garage_count<<std::endl;
     }
