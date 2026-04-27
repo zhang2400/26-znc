@@ -335,8 +335,8 @@ int check_crossroad(){
 int check_roundabout(){
     flag.found_left_roundabout = 0;
     flag.found_right_roundabout = 0;
-    int target_left_lost_count = 15;
-    int target_right_lost_count = 15;
+    int target_left_lost_count = 10;
+    int target_right_lost_count = 10;
     if(left_lost_count > target_left_lost_count && right_lost_count == 0 && right_lost_dir == 0){
         flag.found_left_roundabout = 1;
         std::cout << "found left roundabout" << std::endl;
@@ -522,7 +522,7 @@ void get_lost_count() {
     int target_distance = 10;
     int target_lost_y1 = 13;
 
-    if (lost_x1 == 0 || lost_y1 == 0 || lost_x2 == 0 || lost_y2 == 0 || max_white_column.left_height < 41 || lost_y1 < target_lost_y1) {
+    if (lost_x1 == 0 || lost_y1 == 0 || lost_x2 == 0 || lost_y2 == 0 || max_white_column.left_height < 43 || lost_y1 < target_lost_y1) {
         return;
     }
     if(lost_x2 - lost_x1 == 0){
@@ -602,8 +602,8 @@ void get_narrow_line(){
     if(max_white_column_pers.left_height < 19) return;
     int max_y = max_white_column_pers.left_height - 5;
     if(max_y > 40) max_y = 40;
-    for(int q = 5; q < max_y; q++){
-        if(distances_pers[q] <= 9){
+    for(int q = 2; q < max_y; q++){
+        if(distances_pers[q] < 15){
             int _x = distance_middle_line_pers[q][0];
             int _y = distance_middle_line_pers[q][1];
             if(narrow_line_index > 0 && abs(_y - narrow_line[narrow_line_index - 1][1]) > 3) break;

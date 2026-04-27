@@ -14,8 +14,8 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 160.0f;
-float boost_ratio = 0.15f;
+float speed_base = 200.0f; //基础速度
+float boost_ratio = 0.0f; // 直道加速比率
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
@@ -24,8 +24,8 @@ float turn_pidout = 0;
 float turn_angle = 0;
 float turn_max = 25;
 
-float Kp_max = 0.017f;
-float Kd_max = 0.23f;
+float Kp_max = 0.022f;
+float Kd_max = 0.26f;
 
 // 信号处理变量
 volatile sig_atomic_t g_signal_received = 0;
@@ -88,8 +88,8 @@ Moto Moto_R(PWM2_GPIO66, 73,PWM3_GPIO67 , 50, true);
 // 获取PWM驱动信息
 struct pwm_info servo_pwm_info;
 
-#define max_white_column_height 45
-#define min_white_column_height 35
+#define max_white_column_height 53
+#define min_white_column_height 40
 
 // tag码相关变量
 int id = -1;
@@ -97,8 +97,8 @@ double distance = -1;
 
 void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
-    left_wheel_speed_pid = PID_Incremental_Init(25, 6, 4, 6000, -6000, false, 0.25f);
-    right_wheel_speed_pid = PID_Incremental_Init(25, 6, 4, 6000, -6000, false, 0.25f);
+    left_wheel_speed_pid = PID_Incremental_Init(35, 8, 4, 6000, -6000, true, 0.25f);
+    right_wheel_speed_pid = PID_Incremental_Init(35, 8, 4, 6000, -6000, true, 0.25f);
 
     switch_init();
 
@@ -216,7 +216,6 @@ void* realtime_task(void* arg) {
 
             get_distance_line();
             get_lost_count();
-            get_narrow_line();
             draw_rectan();
 
             bottom_start_end_x_get_pers();
@@ -312,7 +311,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d\n",lost_x1,lost_x2,lost_y1,lost_y2,left_reach_edge,right_reach_edge);
             // vofa_udp.printf("%d\n",flag.stop);
-            // vofa_udp.printf("%d,%d,%d\n",narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle);
+            // vofa_udp.printf("%d,%d,%d,%d\n",narrow_line_index,flag.advance_avoid_obstacle_dir,flag.found_obstacle,counter.drive_in_obstacle);
             // vofa_udp.printf("%d,%d\n",dis_index,distance_middle_line_pers[dis_index][0]);
             // vofa_udp.printf("%d,%.2f,%.2f,%.2f\n",flag.stop,speed_setpoint,left_speed_setpoint,right_speed_setpoint);
             // vofa_udp.printf("diff:%d,cnt:%d,kp:%.2f,kd:%.2f,ang:%.2f\n",image_diff,counter.drive_in_left_roundabout,wheel_turn_pid.Kp,wheel_turn_pid.Kd,angelZ - icm20948_data.anglez);
@@ -321,7 +320,7 @@ void* realtime_task(void* arg) {
 
             // 速度环PID
             // if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
-            //     speed_setpoint = 100;
+            //     speed_setpoint = 180;
             // }else {
             //     if(max_white_column.left_height > max_white_column_height) {
             //         speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column_height - max_white_column_height)) / 3.3)));
@@ -495,9 +494,9 @@ void element_count() {
     // 障碍计数处理
     if(flag.found_obstacle == true && counter.drive_in_obstacle == 0 && counter.drive_in_ramp == 0 && counter.drive_in_obstacle == 0) {
         counter.found_obstacle += 2;
-        if (counter.found_obstacle > 3) {
+        if (counter.found_obstacle > 5) {
             BEEP::beep_ms(200);
-            counter.drive_in_obstacle = 1200;
+            counter.drive_in_obstacle = 700;
         }
     }
 
@@ -682,7 +681,7 @@ void element_check() {
     check_crossroad();
     check_garage();
     // check_ramp();
-    // check_obstacle();
+    check_obstacle();
     check_roundabout();
 }
 
@@ -764,18 +763,18 @@ void *non_realtime_task(void *arg) {
     while (running) {
             cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
 
-            MEASURE_TIME("ncnn input convert", {
-            // 将 OpenCV 的 BGR 数据转换为 ncnn 专属的浮点张量格式 (ncnn::Mat)
-            // 这是每次运行模型前必须要做的操作。
-            // 参数：像素指针, 格式转换类型, 宽, 高
-            ncnn::Mat in = ncnn::Mat::from_pixels(
-                gray1ch.data,            // 直接喂单通道的指针
-                ncnn::Mat::PIXEL_GRAY,   // 关键：指定为纯灰度格式
-                gray1ch.cols,
-                gray1ch.rows
-            );
+            // MEASURE_TIME("ncnn input convert", {
+            // // 将 OpenCV 的 BGR 数据转换为 ncnn 专属的浮点张量格式 (ncnn::Mat)
+            // // 这是每次运行模型前必须要做的操作。
+            // // 参数：像素指针, 格式转换类型, 宽, 高
+            // ncnn::Mat in = ncnn::Mat::from_pixels(
+            //     gray1ch.data,            // 直接喂单通道的指针
+            //     ncnn::Mat::PIXEL_GRAY,   // 关键：指定为纯灰度格式
+            //     gray1ch.cols,
+            //     gray1ch.rows
+            // );
 
-            });
+            // });
             // fprintf(stdout,"%d\n",iii++);
             frame.copyTo(gray);
             // MEASURE_TIME("non rt task", {
@@ -798,24 +797,26 @@ void *non_realtime_task(void *arg) {
             //     distance = atag.getClosetTagDistance(1500);
             //     // cv::putText(gray3ch, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
             // // });
-                tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
-                tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
-                tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
-            if (counter.drive_in_crossroad>0) {
-                tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
-            }
-                // tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
-                cv::circle(gray3ch, cv::Point(lost_x1, lost_y1), 0, cv::Scalar(255, 0, 255), -1);
-                cv::circle(gray3ch, cv::Point(lost_x2, lost_y2), 0, cv::Scalar(255, 0, 255), -1);
-                std::string info_text = "C:" + std::to_string(counter.drive_in_crossroad);
-                cv::putText(gray3ch, info_text, cv::Point(2, 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 255, 255), 1);
+            //     tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
+            //     tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
+            //     tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
+            // if (counter.drive_in_crossroad>0) {
+            //     tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
+            // }
+            //     // tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
+            //     cv::circle(gray3ch, cv::Point(lost_x1, lost_y1), 0, cv::Scalar(255, 0, 255), -1);
+            //     cv::circle(gray3ch, cv::Point(lost_x2, lost_y2), 0, cv::Scalar(255, 0, 255), -1);
+            //     std::string info_text = "C:" + std::to_string(counter.drive_in_crossroad);
+            //     cv::putText(gray3ch, info_text, cv::Point(2, 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 255, 255), 1);
                 // cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
                 // tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
                 // tcp_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
                 // tcp_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
+                // tcp_draw_border_line(cv_image3ch,0,0,narrow_line, cv::Scalar(0xff, 0, 0));
 
             // MEASURE_TIME("image write", {
-                vofa_tcp.imwrite(gray3ch);
+                // vofa_tcp.imwrite(cv_image3ch);
+            vofa_tcp.imwrite(*LQU_CAM_image, 320,240);
                 // http << gray3ch;
         if (Moto_L.speed < 10 && Moto_R.speed < 10 && !flag.start) {
             // MEASURE_TIME("UI_time", {

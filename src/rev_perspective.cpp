@@ -7,7 +7,7 @@ uint8_t gray_pers_image[RESULT_H][RESULT_W];
 uint8_t contrast_pers_image[RESULT_H][RESULT_W];
 uint8_t binary_pers_image[RESULT_H][RESULT_W];
 uint8_t gray_binary_pers_image[RESULT_H][RESULT_W];
-double change_un_Mat[3][3] ={{-2.277444,2.188880,-94.672147},{-0.104705,0.336425,-39.101962},{-0.001153,0.013190,-0.828437}};
+double change_un_Mat[3][3] ={{0.839342,-0.608136,30.813861},{-0.001877,0.056040,9.896094},{0.000456,-0.004221,0.307619}};
 uint8_t* mapping_table[RESULT_H][RESULT_W];
 
 // 建立透视变换指针表
