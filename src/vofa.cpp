@@ -1,7 +1,9 @@
 #include "vofa.h"
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 #include <sys/socket.h>
+#include <fcntl.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -12,7 +14,16 @@ UDPTransport::UDPTransport(const char* ip, int port) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
         std::cerr << "Socket creation failed: " << strerror(errno) << std::endl;
+        return;
     }
+
+    // 设置非阻塞模式，发不出去就丢帧，绝不阻塞
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+
+    // 增大发送缓冲区到512KB，可缓存数帧图像数据
+    int sndbuf = 512 * 1024;
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
@@ -28,8 +39,25 @@ UDPTransport::~UDPTransport() {
 }
 
 bool UDPTransport::t_send(const void* data, size_t length) {
-    ssize_t sent = sendto(sockfd, data, length, 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
-    return sent == static_cast<ssize_t>(length);
+    if (sockfd < 0) return false;
+
+    const uint8_t* buf = static_cast<const uint8_t*>(data);
+    size_t offset = 0;
+
+    // 分片发送：每片1400字节，低于MTU(1500)避免IP层分片
+    // 这样单个UDP包丢失不会导致其他包也丢失
+    while (offset < length) {
+        size_t chunk = std::min(length - offset, static_cast<size_t>(1400));
+        ssize_t sent = sendto(sockfd, buf + offset, chunk, MSG_DONTWAIT,
+                              (struct sockaddr*)&server_addr, sizeof(server_addr));
+        if (sent < 0) {
+            // EAGAIN/EWOULDBLOCK = 内核缓冲区满，丢弃本帧
+            // 其他错误也直接丢弃，调试图传不需要可靠性
+            return false;
+        }
+        offset += sent;
+    }
+    return true;
 }
 
 bool UDPTransport::t_send(const std::vector<unsigned char>& data) {

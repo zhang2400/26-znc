@@ -66,6 +66,9 @@ auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
 auto udp_transport = std::make_unique<UDPTransport>("10.100.16.10", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
+// 图传专用UDP通道（与vofa_udp分开，避免RT线程printf数据和图像数据互相交错）
+auto udp_img_transport = std::make_unique<UDPTransport>("10.100.16.10", 1347);
+auto vofa_udp_img = VOFA(std::move(udp_img_transport));
 
 int incision = 1;
 int incision_max = 1;
@@ -816,7 +819,8 @@ void *non_realtime_task(void *arg) {
 
             // MEASURE_TIME("image write", {
                 // vofa_tcp.imwrite(cv_image3ch);
-            vofa_tcp.imwrite(*LQU_CAM_image, 320,240);
+            // vofa_tcp.imwrite(*LQU_CAM_image, 320,240);
+            vofa_udp_img.imwrite(*LQU_CAM_image, 320,240);
                 // http << gray3ch;
         if (Moto_L.speed < 10 && Moto_R.speed < 10 && !flag.start) {
             // MEASURE_TIME("UI_time", {
@@ -824,6 +828,8 @@ void *non_realtime_task(void *arg) {
                 // UI_show();
             // });
         }
+        // 帧率限制 ~30fps，避免无节制循环烧CPU
+        usleep(33000);
     }
     return nullptr;
 }
