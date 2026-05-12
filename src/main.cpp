@@ -64,10 +64,10 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("10.100.16.10", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("10.131.168.195", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 // 图传专用UDP通道（与vofa_udp分开，避免RT线程printf数据和图像数据互相交错）
-auto udp_img_transport = std::make_unique<UDPTransport>("10.100.16.10", 1347);
+auto udp_img_transport = std::make_unique<UDPTransport>("10.131.168.195", 1347);
 auto vofa_udp_img = VOFA(std::move(udp_img_transport));
 
 int incision = 1;
