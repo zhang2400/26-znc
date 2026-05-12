@@ -1,6 +1,4 @@
 #include "main.h"
-#include <ncnn/net.h>
-#include <ncnn/mat.h>
 
 float CAR_ANGLE_CONVERT = 3.0f;
 
@@ -64,10 +62,10 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("10.131.168.195", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("10.131.168.121", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 // 图传专用UDP通道（与vofa_udp分开，避免RT线程printf数据和图像数据互相交错）
-auto udp_img_transport = std::make_unique<UDPTransport>("10.131.168.195", 1347);
+auto udp_img_transport = std::make_unique<UDPTransport>("10.131.168.121", 1348);
 auto vofa_udp_img = VOFA(std::move(udp_img_transport));
 
 int incision = 1;
@@ -757,11 +755,6 @@ void *non_realtime_task(void *arg) {
     cv::Mat cv_image3ch;
     std::vector<uchar> jpg;
 
-    std::cout << "[ncnn Test] 尝试实例化 ncnn::Net..." << std::endl;
-    ncnn::Net test_net;
-    test_net.opt.use_vulkan_compute = false; // 确保关闭 Vulkan
-    test_net.opt.num_threads = 1;            // 强制单线程
-    std::cout << "[ncnn Test] ncnn::Net 实例化成功，环境完美就绪！" << std::endl;
 
     while (running) {
             cv::cvtColor(gray1ch, gray3ch, cv::COLOR_GRAY2BGR);
@@ -800,27 +793,26 @@ void *non_realtime_task(void *arg) {
             //     distance = atag.getClosetTagDistance(1500);
             //     // cv::putText(gray3ch, std::to_string(distance), cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0xff, 0), 2);
             // // });
-            //     tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
-            //     tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
-            //     tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
-            // if (counter.drive_in_crossroad>0) {
-            //     tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
-            // }
-            //     // tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
-            //     cv::circle(gray3ch, cv::Point(lost_x1, lost_y1), 0, cv::Scalar(255, 0, 255), -1);
-            //     cv::circle(gray3ch, cv::Point(lost_x2, lost_y2), 0, cv::Scalar(255, 0, 255), -1);
-            //     std::string info_text = "C:" + std::to_string(counter.drive_in_crossroad);
-            //     cv::putText(gray3ch, info_text, cv::Point(2, 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 255, 255), 1);
-                // cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
-                // tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
-                // tcp_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
-                // tcp_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
-                // tcp_draw_border_line(cv_image3ch,0,0,narrow_line, cv::Scalar(0xff, 0, 0));
+                tcp_draw_real_border_line(gray3ch, 0, 0, left_border, cv::Scalar(0, 0xff, 0));
+                tcp_draw_real_border_line(gray3ch, 0, 0, right_border, cv::Scalar(0xff, 0, 0));
+                tcp_draw_real_border_line(gray3ch, 0, 0, middle_line, cv::Scalar(0, 0, 0xff));
+            if (counter.drive_in_crossroad>0) {
+                tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
+            }
+                // tcp_draw_real_border_line(gray3ch, 0, 0, distance_middle_line, cv::Scalar(0xff, 0xff, 0));
+                cv::circle(gray3ch, cv::Point(lost_x1, lost_y1), 0, cv::Scalar(255, 0, 255), -1);
+                cv::circle(gray3ch, cv::Point(lost_x2, lost_y2), 0, cv::Scalar(255, 0, 255), -1);
+                std::string info_text = "C:" + std::to_string(counter.drive_in_crossroad);
+                cv::putText(gray3ch, info_text, cv::Point(2, 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 255, 255), 1);
+                cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
+                tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
+                tcp_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
+                tcp_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
+                tcp_draw_border_line(cv_image3ch,0,0,narrow_line, cv::Scalar(0xff, 0, 0));
 
             // MEASURE_TIME("image write", {
-                // vofa_tcp.imwrite(cv_image3ch);
-            // vofa_tcp.imwrite(*LQU_CAM_image, 320,240);
             vofa_udp_img.imwrite(*LQU_CAM_image, 320,240);
+            // vofa_tcp.imwrite(*LQU_CAM_image, 320,240);
                 // http << gray3ch;
         if (Moto_L.speed < 10 && Moto_R.speed < 10 && !flag.start) {
             // MEASURE_TIME("UI_time", {

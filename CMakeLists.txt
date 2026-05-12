@@ -29,8 +29,7 @@ add_definitions(-DLOG_LEVEL=3)
 if (ARCHITECTURE STREQUAL "loongarch64")
     set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/loongarch64/${CUSTOM_OPENCV_DIR}/lib/cmake/opencv4)
     set(OpenCV_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/loongarch64/${CUSTOM_OPENCV_DIR}/include/opencv4)
-    set(ncnn_DIR ${CMAKE_SOURCE_DIR}/lib/loongarch64/ncnn/lib/cmake/ncnn)
-    set(ncnn_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/loongarch64/ncnn/include)
+
 elseif (ARCHITECTURE STREQUAL "x86_64")
     if(USE_OPENCV_MOBILE)
         set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/x86_64/${CUSTOM_OPENCV_DIR}/lib/cmake/opencv4)
@@ -41,7 +40,6 @@ elseif (ARCHITECTURE STREQUAL "x86_64")
 endif()
 
 find_package(OpenCV REQUIRED)
-find_package(ncnn REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/inc)
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -59,4 +57,4 @@ set(SOURCES ${SRC_FILES} ${CODE_FILES} ${SRCC_FILES}
 add_executable(${EXECUTABLE_NAME} ${SOURCES})
 
 # 链接OpenCV和apriltag库
-target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${OpenCV_LIBS} ncnn pthread)
+target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${OpenCV_LIBS} pthread)
