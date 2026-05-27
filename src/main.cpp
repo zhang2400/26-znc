@@ -12,8 +12,8 @@ PID_Position wheel_turn_pid;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 200.0f; //基础速度
-float boost_ratio = 0.2f; // 直道加速比率
+float speed_base = 180.0f; //基础速度
+float boost_ratio = 0.0f; // 直道加速比率
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
 float right_speed_setpoint = 0;
@@ -811,8 +811,11 @@ void *non_realtime_task(void *arg) {
                 tcp_draw_border_line(cv_image3ch,0,0,narrow_line, cv::Scalar(0xff, 0, 0));
 
             // MEASURE_TIME("image write", {
-            vofa_udp_img.imwrite(*LQU_CAM_image, 320,240);
-            // vofa_tcp.imwrite(*LQU_CAM_image, 320,240);
+            // 发送已绘制标注的图像，避免只发送原始帧
+            // vofa_udp_img.imwrite(*LQU_CAM_image, 320,240);
+        // vofa_tcp.imwrite(gray3ch);
+            vofa_tcp.imwrite(*LQU_CAM_image, 320,240);
+
                 // http << gray3ch;
         if (Moto_L.speed < 10 && Moto_R.speed < 10 && !flag.start) {
             // MEASURE_TIME("UI_time", {
