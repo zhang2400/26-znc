@@ -17,7 +17,7 @@ execute_process(
 
 if(USE_LOONGARCH)
     set(ARCHITECTURE "loongarch64")
-endif ()
+endif()
 
 set(EXECUTABLE_NAME cv)
 set(CMAKE_CXX_STANDARD 17)
@@ -26,15 +26,14 @@ add_definitions(-DHTTP_STREAM)
 add_definitions(-DOVERWRITE_LOG)
 add_definitions(-DLOG_LEVEL=3)
 
-if (ARCHITECTURE STREQUAL "loongarch64")
+if(ARCHITECTURE STREQUAL "loongarch64")
     set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/loongarch64/${CUSTOM_OPENCV_DIR}/lib/cmake/opencv4)
     set(OpenCV_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/loongarch64/${CUSTOM_OPENCV_DIR}/include/opencv4)
-
-elseif (ARCHITECTURE STREQUAL "x86_64")
+elseif(ARCHITECTURE STREQUAL "x86_64")
     if(USE_OPENCV_MOBILE)
         set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/lib/x86_64/${CUSTOM_OPENCV_DIR}/lib/cmake/opencv4)
         set(OpenCV_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/x86_64/${CUSTOM_OPENCV_DIR}/include/opencv4)
-    endif ()
+    endif()
     set(apriltag_DIR ${CMAKE_SOURCE_DIR}/lib/x86_64/apriltag/lib/apriltag/cmake)
     set(apriltag_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/lib/x86_64/apriltag/include)
 endif()
@@ -45,16 +44,12 @@ include_directories(${CMAKE_SOURCE_DIR}/inc)
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${ncnn_INCLUDE_DIRS})
 
-# 源文件列表
 file(GLOB SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 file(GLOB SRCC_FILES "${CMAKE_SOURCE_DIR}/src/*.c")
+list(REMOVE_ITEM SRC_FILES "${CMAKE_SOURCE_DIR}/src/receive.cpp")
+set(SOURCES ${SRC_FILES} ${CODE_FILES} ${SRCC_FILES})
 
-# 合并源文件
-set(SOURCES ${SRC_FILES} ${CODE_FILES} ${SRCC_FILES}
-)
-
-# 创建可执行文件
 add_executable(${EXECUTABLE_NAME} ${SOURCES})
-
-# 链接OpenCV和apriltag库
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${OpenCV_LIBS} pthread)
+
+add_executable(receive src/receive.cpp)
