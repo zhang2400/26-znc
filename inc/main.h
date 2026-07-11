@@ -38,6 +38,18 @@
 #include "UI.h"
 #include <bldc.h>
 #include <zf_driver_pwm.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include <atomic>
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <thread>
+#include <vector>
 
 void element_count(void);
 void element_process(void);

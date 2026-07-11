@@ -8,6 +8,10 @@ PID_Incremental right_wheel_speed_pid;
 
 PID_Position wheel_turn_pid;
 
+//临时测试搜索白块代码
+int center_target_area = 0;
+int center_target_w = 0;
+int center_target_h = 0;
 // 电机相关变量
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
@@ -95,6 +99,269 @@ struct pwm_info servo_pwm_info;
 // tag码相关变量
 int id = -1;
 double distance = -1;
+
+// ===================== 识别板通信与目标融合 =====================
+
+enum {
+    TARGET_UNKNOWN = -1,
+    TARGET_WEAPON = 0,
+    TARGET_MATERIAL = 1,
+    TARGET_VEHICLE = 2
+};
+
+constexpr int TARGET_LISTEN_PORT = 2233;
+constexpr int TARGET_PACKET_SIZE = 12;
+constexpr int TARGET_CONF_TH = 60;           //控制识别类别可信度
+constexpr int TARGET_TIMEOUT_MS = 200;       //控制通信结果多久过期
+
+// 识别板 BEV 坐标是 320x240，target_y 越大通常表示越靠近车。
+// 如果实测相反，把 remote_target_valid() 里的 >= 改成 <=。
+constexpr int TARGET_NEAR_Y_TH = 100;        //控制目标多近才用识别结果
+
+struct RemoteTarget {
+    std::atomic<int> class_id{TARGET_UNKNOWN};
+    std::atomic<int> confidence{0};
+    std::atomic<int> target_x{-1};
+    std::atomic<int> target_y{-1};
+    std::atomic<uint64_t> last_recv_ms{0};
+    std::atomic<uint8_t> seq{0};
+};
+
+RemoteTarget remote_target;
+
+bool center_target_found = false;
+int center_target_count = 0;
+int center_target_x = -1;
+int center_target_y = -1;
+bool target_slowdown = false;
+
+uint64_t get_ms()
+{
+    using namespace std::chrono;
+    return static_cast<uint64_t>(
+        duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+}
+
+static uint8_t target_checksum(const uint8_t* data, size_t len)
+{
+    uint8_t sum = 0;
+    for (size_t i = 0; i < len; ++i) {
+        sum = static_cast<uint8_t>(sum + data[i]);
+    }
+    return sum;
+}
+
+static int16_t read_i16_le(const uint8_t* src)
+{
+    uint16_t value = static_cast<uint16_t>(src[0])
+        | (static_cast<uint16_t>(src[1]) << 8);
+    return static_cast<int16_t>(value);
+}
+
+bool remote_target_valid()
+{
+    int cls = remote_target.class_id.load();
+    int conf = remote_target.confidence.load();
+    int y = remote_target.target_y.load();
+    uint64_t last = remote_target.last_recv_ms.load();
+    uint64_t now = get_ms();
+
+    return cls >= TARGET_WEAPON
+        && cls <= TARGET_VEHICLE
+        && conf >= TARGET_CONF_TH
+        && y >= TARGET_NEAR_Y_TH
+        && last > 0
+        && now - last < TARGET_TIMEOUT_MS;
+}
+
+void target_recv_thread()
+{
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        return;
+    }
+
+    int reuse = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+    sockaddr_in addr {};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(TARGET_LISTEN_PORT);
+
+    if (bind(server_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+        close(server_fd);
+        return;
+    }
+
+    if (listen(server_fd, 1) < 0) {
+        close(server_fd);
+        return;
+    }
+
+    while (running) {
+        sockaddr_in client_addr {};
+        socklen_t client_len = sizeof(client_addr);
+        int client_fd = accept(server_fd, reinterpret_cast<sockaddr*>(&client_addr), &client_len);
+        if (client_fd < 0) {
+            continue;
+        }
+
+        int nodelay = 1;
+        setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
+        std::vector<uint8_t> pending;
+        uint8_t buffer[128];
+
+        while (running) {
+            ssize_t n = recv(client_fd, buffer, sizeof(buffer), 0);
+            if (n <= 0) {
+                break;
+            }
+
+            for (ssize_t i = 0; i < n; ++i) {
+                pending.push_back(buffer[i]);
+            }
+
+            while (pending.size() >= TARGET_PACKET_SIZE) {
+                if (pending[0] != 0xAA || pending[1] != 0x55) {
+                    auto next = std::find(pending.begin() + 1, pending.end(), 0xAA);
+                    pending.erase(pending.begin(), next);
+                    continue;
+                }
+
+                if (target_checksum(pending.data(), TARGET_PACKET_SIZE - 1)
+                    != pending[TARGET_PACKET_SIZE - 1]) {
+                    pending.erase(pending.begin());
+                    continue;
+                }
+
+                int cls = static_cast<int8_t>(pending[3]);
+                int conf = pending[4];
+                int16_t x = read_i16_le(pending.data() + 5);
+                int16_t y = read_i16_le(pending.data() + 7);
+
+                remote_target.seq.store(pending[2]);
+                remote_target.class_id.store(cls);
+                remote_target.confidence.store(conf);
+                remote_target.target_x.store(x);
+                remote_target.target_y.store(y);
+                remote_target.last_recv_ms.store(get_ms());
+
+                pending.erase(pending.begin(), pending.begin() + TARGET_PACKET_SIZE);
+            }
+
+            if (pending.size() > 128) {
+                pending.clear();
+            }
+        }
+
+        close(client_fd);
+    }
+
+    close(server_fd);
+}
+
+void detect_center_target()
+{
+    int area = 0;
+    int sum_x = 0;
+    int sum_y = 0;
+    int min_x = 40;
+    int max_x = 0;
+    int min_y = 60;
+    int max_y = 0;
+
+    // binary_pers_image 尺寸是 60x40，y 是行，x 是列。
+    // 只看中近端区域，避免远端噪声和车头区域。
+    for (int y = 10; y <= 52; y++) {
+        int left = left_distance_line_pers[y][0] + 2;
+        int right = right_distance_line_pers[y][0] - 2;
+
+        if (left < 2) left = 2;
+        if (right > 37) right = 37;
+        if (right <= left + 4) continue;
+
+        for (int x = left; x <= right; x++) {
+            if (binary_pers_image[y][x] == 255) {
+                area++;
+                sum_x += x;
+                sum_y += y;
+                min_x = std::min(min_x, x);
+                max_x = std::max(max_x, x);
+                min_y = std::min(min_y, y);
+                max_y = std::max(max_y, y);
+            }
+        }
+    }
+
+    center_target_area = area;
+    center_target_w = 0;
+    center_target_h = 0;
+
+    if (area > 0) {
+        center_target_w = max_x - min_x + 1;
+        center_target_h = max_y - min_y + 1;
+    }
+    bool found = false;
+
+    if (area > 3 && area < 300) {
+        int w = max_x - min_x + 1;
+        int h = max_y - min_y + 1;
+
+        // 排除细长线，保留中间块状目标。
+        if (w >= 3 && h >= 3 && w <= 40 && h <= 46) {
+            found = true;
+            center_target_x = sum_x / area;
+            center_target_y = sum_y / area;
+        }
+    }
+
+    if (found) {
+        center_target_count += 2;
+        if (center_target_count > 8) center_target_count = 8;
+    } else {
+        center_target_count--;
+        if (center_target_count < 0) center_target_count = 0;
+        center_target_x = -1;
+        center_target_y = -1;
+    }
+
+    center_target_found = center_target_count >= 4;
+}
+
+void target_fusion_process()
+{
+    target_slowdown = false;
+
+    // 没看到中间白块时，不覆盖原来的窄线避障结果。
+    if (!center_target_found) {
+        return;
+    }
+
+    // 看到了中间白块，但识别结果还没稳定：先降速，不强行决定方向。
+    if (!remote_target_valid()) {
+        target_slowdown = true;
+        return;
+    }
+
+    int cls = remote_target.class_id.load();
+
+    if (cls == TARGET_WEAPON) {
+        // 武器：直行，不进入绕障。
+        flag.found_obstacle = false;
+        flag.advance_avoid_obstacle_dir = 0;
+        counter.found_obstacle = 0;
+    } else if (cls == TARGET_MATERIAL) {
+        // 物资：右绕。
+        flag.found_obstacle = true;
+        flag.advance_avoid_obstacle_dir = 1;
+    } else if (cls == TARGET_VEHICLE) {
+        // 交通工具：左绕。
+        flag.found_obstacle = true;
+        flag.advance_avoid_obstacle_dir = -1;
+    }
+}
 
 void* realtime_task(void* arg) {
     wheel_turn_pid = PID_Position_Init(0.015, 0, 0, 0.20, 0, 50000, -50000, false, 0.2f);;
@@ -227,6 +494,10 @@ void* realtime_task(void* arg) {
             get_narrow_line();
 
             element_check();
+
+            detect_center_target();
+            target_fusion_process();
+
             element_count();
             element_process();
 
@@ -304,7 +575,7 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",dis_index,distances[dis_index],left_distance[dis_index][0],right_distance[dis_index][0],detect_count_max);
             // vofa_udp.printf("%d,%d,%d,%.3f,%.3f\n",image_diff, flag.drive_in_crossroad, counter.drive_in_crossroad, wheel_turn_pid.Kp, wheel_turn_pid.Kd);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,abs(left_lost_count - right_lost_count),distances[25] - road_distances[25],distances[20] - road_distances[20]);
-            vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_left_roundabout,angelZ - icm20948_data.anglez);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%.1f\n",id,left_lost_count,right_lost_count,rstate,counter.drive_in_left_roundabout,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("%d,%d,%d,%d,%d\n",dis_index,left_border[dis_index][0],right_border[dis_index][0],left_border[dis_index][1],right_border[dis_index][1]);
             // vofa_udp.printf("%d,%d\n",bottom_start_x,bottom_end_x);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",left_lost_count,right_lost_count,max_white_column.left_height,lost_y1, left_lost_dir,right_lost_dir,left_reach_edge,right_reach_edge);
@@ -324,8 +595,17 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%.2f,%.2f,%.2f\n",flag.stop,speed_setpoint,left_speed_setpoint,right_speed_setpoint);
             // vofa_udp.printf("diff:%d,cnt:%d,kp:%.2f,kd:%.2f,ang:%.2f\n",image_diff,counter.drive_in_left_roundabout,wheel_turn_pid.Kp,wheel_turn_pid.Kd,angelZ - icm20948_data.anglez);
             // vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
+            // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n", center_target_found, center_target_count, remote_target.class_id.load(), remote_target.confidence.load(), remote_target.target_x.load(), remote_target.target_y.load(), flag.advance_avoid_obstacle_dir, counter.drive_in_obstacle);
             // });
-
+                vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",
+                   center_target_found,
+                   center_target_count,
+                   center_target_area,
+                   center_target_w,
+                   center_target_h,
+                   remote_target.class_id.load(),
+                   remote_target.confidence.load(),
+                   remote_target.target_y.load());
             // 速度环PID
             if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
                 speed_setpoint = 180;
@@ -337,6 +617,11 @@ void* realtime_task(void* arg) {
                 } else {
                     speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
                 }
+            }
+            if (counter.drive_in_obstacle > 0) {
+                speed_setpoint *= 0.65f;
+            } else if (target_slowdown) {
+                speed_setpoint *= 0.75f;
             }
 
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
@@ -503,7 +788,12 @@ void element_count() {
     }
 
     // 障碍计数处理
-    if(flag.found_obstacle == true && counter.drive_in_obstacle == 0 && counter.drive_in_ramp == 0 && counter.drive_in_obstacle == 0) {
+
+    if(flag.found_obstacle == true
+        && counter.drive_in_obstacle == 0
+        && counter.drive_in_ramp == 0
+        && counter.drive_in_crossroad == 0) {
+
         counter.found_obstacle += 2;
         if (counter.found_obstacle > 5) {
             BEEP::beep_ms(200);
@@ -875,6 +1165,8 @@ int main()
     // 创建posix线程
     pthread_t rt_thread;
     pthread_t nrt_thread;
+
+    std::thread(target_recv_thread).detach();
 
     pthread_create(&rt_thread, nullptr, realtime_task, nullptr);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // 运行1秒

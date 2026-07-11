@@ -4,16 +4,22 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cstdint>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <iomanip>
 #include <iostream>
-#include <sstream>
+#include <vector>
 #include <string>
 
 namespace {
 
 constexpr int kDefaultListenPort = 2233;
+constexpr size_t kPacketSize = 12;
+constexpr uint8_t kHeader0 = 0xAA;
+constexpr uint8_t kHeader1 = 0x55;
 
 const char* macro_name(int macro_id)
 {
@@ -21,28 +27,52 @@ const char* macro_name(int macro_id)
     case 0: return "weapon";
     case 1: return "material";
     case 2: return "vehicle";
-    case 255: return "invalid";
+    case -1: return "unknown";
     default: return "unknown";
     }
 }
 
-bool parse_macro_packet(const std::string& line, int& macro_id)
+uint8_t checksum(const uint8_t* data, size_t len)
 {
-    std::istringstream iss(line);
-    std::string tag;
-    int value = 255;
+    uint8_t sum = 0;
+    for (size_t i = 0; i < len; ++i) {
+        sum = static_cast<uint8_t>(sum + data[i]);
+    }
+    return sum;
+}
 
-    if (!(iss >> tag >> value)) {
+int16_t read_i16_le(const uint8_t* src)
+{
+    const uint16_t value = static_cast<uint16_t>(src[0])
+        | (static_cast<uint16_t>(src[1]) << 8);
+    return static_cast<int16_t>(value);
+}
+
+struct TargetPacket {
+    uint8_t seq = 0;
+    int class_id = -1;
+    uint8_t confidence = 0;
+    int16_t target_x = -1;
+    int16_t target_y = -1;
+    uint16_t timestamp_ms = 0;
+};
+
+bool parse_target_packet(const uint8_t* packet, TargetPacket& out)
+{
+    if (packet[0] != kHeader0 || packet[1] != kHeader1) {
         return false;
     }
-    if (tag != "MACRO") {
-        return false;
-    }
-    if (!((value >= 0 && value <= 2) || value == 255)) {
+    if (checksum(packet, kPacketSize - 1) != packet[kPacketSize - 1]) {
         return false;
     }
 
-    macro_id = value;
+    out.seq = packet[2];
+    out.class_id = static_cast<int8_t>(packet[3]);
+    out.confidence = packet[4];
+    out.target_x = read_i16_le(packet + 5);
+    out.target_y = read_i16_le(packet + 7);
+    out.timestamp_ms = static_cast<uint16_t>(packet[9])
+        | (static_cast<uint16_t>(packet[10]) << 8);
     return true;
 }
 
@@ -53,11 +83,10 @@ void print_usage(const char* program)
         << "  " << program << " [listen_port]\n\n"
         << "Default:\n"
         << "  listen_port " << kDefaultListenPort << "\n\n"
-        << "Expected packet format:\n"
-        << "  MACRO 0\n"
-        << "  MACRO 1\n"
-        << "  MACRO 2\n"
-        << "  MACRO 255\n";
+        << "Expected binary packet, 12 bytes:\n"
+        << "  AA 55 seq class confidence x_lo x_hi y_lo y_hi time_lo time_hi checksum\n\n"
+        << "class:\n"
+        << "  -1 unknown, 0 weapon, 1 material, 2 vehicle\n";
 }
 
 int create_server_socket(int port)
@@ -100,8 +129,8 @@ void handle_client(int client_fd, const sockaddr_in& client_addr)
     inet_ntop(AF_INET, &client_addr.sin_addr, ip, sizeof(ip));
     std::cout << "client connected: " << ip << ":" << ntohs(client_addr.sin_port) << std::endl;
 
-    std::string pending;
-    char buffer[256];
+    std::vector<uint8_t> pending;
+    uint8_t buffer[256];
 
     while (true) {
         ssize_t n = recv(client_fd, buffer, sizeof(buffer), 0);
@@ -117,24 +146,33 @@ void handle_client(int client_fd, const sockaddr_in& client_addr)
             break;
         }
 
-        pending.append(buffer, static_cast<size_t>(n));
+        pending.insert(pending.end(), buffer, buffer + n);
 
-        size_t pos = 0;
-        while ((pos = pending.find('\n')) != std::string::npos) {
-            std::string line = pending.substr(0, pos);
-            pending.erase(0, pos + 1);
-
-            if (!line.empty() && line.back() == '\r') {
-                line.pop_back();
+        while (pending.size() >= kPacketSize) {
+            if (pending[0] != kHeader0 || pending[1] != kHeader1) {
+                auto next = std::find(pending.begin() + 1, pending.end(), kHeader0);
+                pending.erase(pending.begin(), next);
+                continue;
             }
 
-            int macro_id = 255;
-            if (parse_macro_packet(line, macro_id)) {
-                std::cout << "received macro_id=" << macro_id
-                          << " name=" << macro_name(macro_id)
+            TargetPacket packet;
+            if (parse_target_packet(pending.data(), packet)) {
+                std::cout << "received seq=" << static_cast<int>(packet.seq)
+                          << " class=" << packet.class_id
+                          << " name=" << macro_name(packet.class_id)
+                          << " confidence=" << static_cast<int>(packet.confidence) << "%"
+                          << " target=(" << packet.target_x << "," << packet.target_y << ")"
+                          << " time=" << packet.timestamp_ms
                           << std::endl;
+                pending.erase(pending.begin(), pending.begin() + kPacketSize);
             } else {
-                std::cout << "invalid packet: " << line << std::endl;
+                std::cout << "invalid checksum/header packet:";
+                for (size_t i = 0; i < kPacketSize; ++i) {
+                    std::cout << " " << std::hex << std::uppercase << std::setw(2)
+                              << std::setfill('0') << static_cast<int>(pending[i]);
+                }
+                std::cout << std::dec << std::setfill(' ') << std::endl;
+                pending.erase(pending.begin());
             }
         }
     }

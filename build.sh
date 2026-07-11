@@ -1,44 +1,39 @@
 #!/bin/bash
+set -euo pipefail
 
-# 检测是否存在 CMakeLists.txt 文件
+BUILD_DIR="${BUILD_DIR:-cmake-build-cross}"
+TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-loongarch64-linux-gnu-}"
+TARGET="${1:-cv}"
+
 if [ ! -f "CMakeLists.txt" ]; then
     echo "Error: CMakeLists.txt not found."
     exit 1
 fi
 
-GENERATOR="Ninja"
-# release: r, debug: d
-if [ "$1" == "d" ]; then
-    BUILD_DIR="cmake-build-debug"
-    CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Debug"
+echo "Configuring cross build..."
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DCMAKE_MAKE_PROGRAM=ninja \
+    -DCMAKE_C_COMPILER="${TOOLCHAIN_PREFIX}gcc" \
+    -DCMAKE_CXX_COMPILER="${TOOLCHAIN_PREFIX}g++" \
+    -DUSE_LOONGARCH=ON \
+    -G Ninja \
+    -S . \
+    -B "$BUILD_DIR"
+
+echo "Building target: $TARGET"
+cmake --build "$BUILD_DIR" --target "$TARGET"
+
+if [ -f "$BUILD_DIR/$TARGET" ]; then
+    cp "$BUILD_DIR/$TARGET" "./$TARGET"
+    echo "Build finished: ./$TARGET"
+    file "./$TARGET" || true
 else
-    BUILD_DIR="cmake-build-release"
-    CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Release"
+    echo "Build finished, but executable was not found at $BUILD_DIR/$TARGET"
 fi
 
-# 创建构建目录（如果不存在）
-if [ ! -d "$BUILD_DIR" ]; then
-    mkdir "$BUILD_DIR"
+if [ -f "$BUILD_DIR/compile_commands.json" ]; then
+    cp "$BUILD_DIR/compile_commands.json" ./compile_commands.json
+    echo "Updated: ./compile_commands.json"
 fi
-
-# 进入构建目录
-cd "$BUILD_DIR" || exit
-
-# 清理构建目录
-echo "Cleaning build directory..."
-rm -rf ./*
-
-# 运行 CMake 配置
-echo "Configuring project with CMake..."
-cmake -G "$GENERATOR" $CMAKE_OPTIONS ..
-
-# 运行 Ninja 构建
-echo "Building project with Ninja..."
-ninja
-
-# 返回上级目录
-cd ..
-
-# 复制构建结果
-build_name=$(grep "set(EXECUTABLE" < CMakeLists.txt | cut -d ")" -f 1 | cut -d " " -f 2)
-cp "$BUILD_DIR/$build_name" .

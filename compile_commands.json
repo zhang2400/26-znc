@@ -1,0 +1,170 @@
+[
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/GPIO.cpp.o -c /home/master/loongson_camera/src/GPIO.cpp",
+  "file": "/home/master/loongson_camera/src/GPIO.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/GPIO.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/PID.cpp.o -c /home/master/loongson_camera/src/PID.cpp",
+  "file": "/home/master/loongson_camera/src/PID.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/PID.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/UI.cpp.o -c /home/master/loongson_camera/src/UI.cpp",
+  "file": "/home/master/loongson_camera/src/UI.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/UI.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/beep.cpp.o -c /home/master/loongson_camera/src/beep.cpp",
+  "file": "/home/master/loongson_camera/src/beep.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/beep.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/bldc.cpp.o -c /home/master/loongson_camera/src/bldc.cpp",
+  "file": "/home/master/loongson_camera/src/bldc.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/bldc.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/config.cpp.o -c /home/master/loongson_camera/src/config.cpp",
+  "file": "/home/master/loongson_camera/src/config.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/config.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/counter.cpp.o -c /home/master/loongson_camera/src/counter.cpp",
+  "file": "/home/master/loongson_camera/src/counter.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/counter.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/encoder.cpp.o -c /home/master/loongson_camera/src/encoder.cpp",
+  "file": "/home/master/loongson_camera/src/encoder.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/encoder.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/flag.cpp.o -c /home/master/loongson_camera/src/flag.cpp",
+  "file": "/home/master/loongson_camera/src/flag.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/flag.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/font.cpp.o -c /home/master/loongson_camera/src/font.cpp",
+  "file": "/home/master/loongson_camera/src/font.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/font.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/image_process.cpp.o -c /home/master/loongson_camera/src/image_process.cpp",
+  "file": "/home/master/loongson_camera/src/image_process.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/image_process.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/log.cpp.o -c /home/master/loongson_camera/src/log.cpp",
+  "file": "/home/master/loongson_camera/src/log.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/log.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/main.cpp.o -c /home/master/loongson_camera/src/main.cpp",
+  "file": "/home/master/loongson_camera/src/main.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/moto.cpp.o -c /home/master/loongson_camera/src/moto.cpp",
+  "file": "/home/master/loongson_camera/src/moto.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/moto.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/my_cv2.cpp.o -c /home/master/loongson_camera/src/my_cv2.cpp",
+  "file": "/home/master/loongson_camera/src/my_cv2.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/my_cv2.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/pwm.cpp.o -c /home/master/loongson_camera/src/pwm.cpp",
+  "file": "/home/master/loongson_camera/src/pwm.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/pwm.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/register.cpp.o -c /home/master/loongson_camera/src/register.cpp",
+  "file": "/home/master/loongson_camera/src/register.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/register.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/rev_perspective.cpp.o -c /home/master/loongson_camera/src/rev_perspective.cpp",
+  "file": "/home/master/loongson_camera/src/rev_perspective.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/rev_perspective.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/road.cpp.o -c /home/master/loongson_camera/src/road.cpp",
+  "file": "/home/master/loongson_camera/src/road.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/road.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/servo.cpp.o -c /home/master/loongson_camera/src/servo.cpp",
+  "file": "/home/master/loongson_camera/src/servo.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/servo.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/switch.cpp.o -c /home/master/loongson_camera/src/switch.cpp",
+  "file": "/home/master/loongson_camera/src/switch.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/switch.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/tft180.cpp.o -c /home/master/loongson_camera/src/tft180.cpp",
+  "file": "/home/master/loongson_camera/src/tft180.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/tft180.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/vofa.cpp.o -c /home/master/loongson_camera/src/vofa.cpp",
+  "file": "/home/master/loongson_camera/src/vofa.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/vofa.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/zf_common_function.cpp.o -c /home/master/loongson_camera/src/zf_common_function.cpp",
+  "file": "/home/master/loongson_camera/src/zf_common_function.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/zf_common_function.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/zf_driver_file.cpp.o -c /home/master/loongson_camera/src/zf_driver_file.cpp",
+  "file": "/home/master/loongson_camera/src/zf_driver_file.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/zf_driver_file.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/cv.dir/src/zf_driver_pwm.cpp.o -c /home/master/loongson_camera/src/zf_driver_pwm.cpp",
+  "file": "/home/master/loongson_camera/src/zf_driver_pwm.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/zf_driver_pwm.cpp.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-gcc -DHTTP_STREAM -DLOG_LEVEL=3 -DOPENCV_DISABLE_THREAD_SUPPORT=1 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -isystem /home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -o CMakeFiles/cv.dir/src/icm20948.c.o -c /home/master/loongson_camera/src/icm20948.c",
+  "file": "/home/master/loongson_camera/src/icm20948.c",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/cv.dir/src/icm20948.c.o"
+},
+{
+  "directory": "/home/master/loongson_camera/cmake-build-cross",
+  "command": "/opt/loogson/loongson-gnu-toolchain/bin/loongarch64-linux-gnu-g++ -DHTTP_STREAM -DLOG_LEVEL=3 -DOVERWRITE_LOG -I/home/master/loongson_camera/inc -I/home/master/loongson_camera/lib/loongarch64/opencv-mobile/include/opencv4 -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/receive.dir/src/receive.cpp.o -c /home/master/loongson_camera/src/receive.cpp",
+  "file": "/home/master/loongson_camera/src/receive.cpp",
+  "output": "/home/master/loongson_camera/cmake-build-cross/CMakeFiles/receive.dir/src/receive.cpp.o"
+}
+]
