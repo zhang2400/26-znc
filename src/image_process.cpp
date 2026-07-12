@@ -322,7 +322,7 @@ void max_white_column_get_pers(int16_t x1, int16_t y1, int16_t x2, int16_t y2){
 
 int check_crossroad(){
     flag.found_crossroad = false;
-    if(left_lost_count > 3 && right_lost_count > 3 && left_lost_count + right_lost_count > 12 && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
+    if(left_lost_count > 3 && right_lost_count > 3 && left_lost_count + right_lost_count > 10 && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0){
         flag.found_crossroad = true;
         counter.drive_in_left_roundabout = 0;
         counter.drive_in_right_roundabout = 0;
@@ -1644,7 +1644,7 @@ void tcp_draw_real_border_line(cv::Mat& image, int x, int y, const uint8_t line[
 }
 
 void cover_car_head(){
-    for(int x = 30; x < 53; x++){
+    for(int x = 30; x < 56; x++){
         for(int y = 47; y < 60; y++){
             gray_image[y][x] = gray_image[y-1][x];
         }

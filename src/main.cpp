@@ -1,5 +1,7 @@
 #include "main.h"
 
+#include <termios.h>
+
 float CAR_ANGLE_CONVERT = 3.0f;
 
 // PID相关变量
@@ -12,11 +14,12 @@ PID_Position wheel_turn_pid;
 int center_target_area = 0;
 int center_target_w = 0;
 int center_target_h = 0;
+
 // 电机相关变量
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 170.0f; //基础速度
+float speed_base = 180.0f; //基础速度
 float boost_ratio = 0.0f; // 直道加速比率
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -128,18 +131,95 @@ struct RemoteTarget {
 };
 
 RemoteTarget remote_target;
+// 识别类别本地锁存：解决长焦摄像头近距离丢目标的问题
+int locked_target_class = TARGET_UNKNOWN;
+int locked_target_confidence = 0;
+uint64_t locked_target_until_ms = 0;
 
+constexpr int TARGET_LOCAL_LOCK_MS = 1200;
 bool center_target_found = false;
 int center_target_count = 0;
 int center_target_x = -1;
 int center_target_y = -1;
 bool target_slowdown = false;
 
+// 识别目标专用绕行状态，和原避障块 counter.drive_in_obstacle 分开
+int target_avoid_ms = 0;
+int target_avoid_dir = 0;
+bool target_action_latched = false;
+
+constexpr int TARGET_AVOID_TIME_MS = 800;       //识别目标绕行总时间
+constexpr int TARGET_AVOID_BIAS = 7500;         //识别目标绕行偏置
+constexpr int TARGET_AVOID_RETURN_MS = 0;     //最后多少 ms 做回正250
+constexpr int TARGET_AVOID_RETURN_BIAS = 0;  //回正偏置3000
+constexpr uint16 BLDC_SAFE_STOP_DUTY = static_cast<uint16>(BLDC_DUTY_MIN);
+
 uint64_t get_ms()
 {
     using namespace std::chrono;
     return static_cast<uint64_t>(
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+}
+
+void emergency_stop_outputs()
+{
+    running = false;
+    flag.stop = true;
+    speed_base = 0;
+    speed_setpoint = 0;
+    left_speed_setpoint = 0;
+    right_speed_setpoint = 0;
+    left_wheel_pidout = 0;
+    right_wheel_pidout = 0;
+
+    Moto_L.set_speed(0);
+    Moto_R.set_speed(0);
+    pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(500));
+    pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(500));
+}
+
+void terminal_stop_thread()
+{
+    if (!isatty(STDIN_FILENO)) {
+        char ch = 0;
+        while (running && std::cin.get(ch)) {
+            if (ch == 'q' || ch == 'Q') {
+                std::cout << "q pressed, emergency stop." << std::endl;
+                emergency_stop_outputs();
+                break;
+            }
+        }
+        return;
+    }
+
+    termios old_term {};
+    if (tcgetattr(STDIN_FILENO, &old_term) != 0) {
+        return;
+    }
+
+    termios raw_term = old_term;
+    raw_term.c_lflag &= static_cast<unsigned int>(~(ICANON | ECHO));
+    raw_term.c_cc[VMIN] = 0;
+    raw_term.c_cc[VTIME] = 1;
+
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &raw_term) != 0) {
+        return;
+    }
+
+    while (running) {
+        char ch = 0;
+        ssize_t n = read(STDIN_FILENO, &ch, 1);
+        if (n == 1 && (ch == 'q' || ch == 'Q')) {
+            std::cout << "q pressed, emergency stop." << std::endl;
+            emergency_stop_outputs();
+            break;
+        }
+        if (n < 0 && errno != EINTR && errno != EAGAIN) {
+            break;
+        }
+    }
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_term);
 }
 
 static uint8_t target_checksum(const uint8_t* data, size_t len)
@@ -162,16 +242,37 @@ bool remote_target_valid()
 {
     int cls = remote_target.class_id.load();
     int conf = remote_target.confidence.load();
-    int y = remote_target.target_y.load();
     uint64_t last = remote_target.last_recv_ms.load();
     uint64_t now = get_ms();
 
     return cls >= TARGET_WEAPON
         && cls <= TARGET_VEHICLE
         && conf >= TARGET_CONF_TH
-        && y >= TARGET_NEAR_Y_TH
         && last > 0
         && now - last < TARGET_TIMEOUT_MS;
+}
+
+void update_remote_target_lock()
+{
+    uint64_t now = get_ms();
+
+    if (remote_target_valid()) {
+        locked_target_class = remote_target.class_id.load();
+        locked_target_confidence = remote_target.confidence.load();
+        locked_target_until_ms = now + TARGET_LOCAL_LOCK_MS;
+    }
+
+    if (now > locked_target_until_ms) {
+        locked_target_class = TARGET_UNKNOWN;
+        locked_target_confidence = 0;
+    }
+}
+
+bool locked_target_valid()
+{
+    return locked_target_class >= TARGET_WEAPON
+        && locked_target_class <= TARGET_VEHICLE
+        && get_ms() <= locked_target_until_ms;
 }
 
 void target_recv_thread()
@@ -272,23 +373,49 @@ void detect_center_target()
     int min_y = 60;
     int max_y = 0;
 
-    // binary_pers_image 尺寸是 60x40，y 是行，x 是列。
-    // 只看中近端区域，避免远端噪声和车头区域。
-    for (int y = 10; y <= 52; y++) {
+    for (int y = 8; y <= 54; y++) {
         int left = left_distance_line_pers[y][0] + 2;
         int right = right_distance_line_pers[y][0] - 2;
 
         if (left < 2) left = 2;
         if (right > 37) right = 37;
-        if (right <= left + 4) continue;
+        if (right <= left + 8) continue;
 
-        for (int x = left; x <= right; x++) {
-            if (binary_pers_image[y][x] == 255) {
-                area++;
-                sum_x += x;
-                sum_y += y;
-                min_x = std::min(min_x, x);
-                max_x = std::max(max_x, x);
+        int road_mid = (left + right) / 2;
+
+        int x = left;
+        while (x <= right) {
+            while (x <= right && binary_pers_image[y][x] != 255) {
+                x++;
+            }
+
+            if (x > right) break;
+
+            int run_start = x;
+            while (x <= right && binary_pers_image[y][x] == 255) {
+                x++;
+            }
+            int run_end = x - 1;
+
+            int run_w = run_end - run_start + 1;
+            int run_cx = (run_start + run_end) / 2;
+
+            int line_mid = distance_middle_line_pers[y][0];
+            if (line_mid < 2 || line_mid > 37) {
+                line_mid = road_mid;
+            }
+
+            bool width_ok = (run_w >= 2 && run_w <= 30);
+            bool center_ok = (std::abs(run_cx - line_mid) <= 20);
+            bool away_from_edge = (run_cx - left >= 2) && (right - run_cx >= 2);
+
+            if (width_ok && center_ok && away_from_edge) {
+                area += run_w;
+                sum_x += run_cx * run_w;
+                sum_y += y * run_w;
+
+                min_x = std::min(min_x, run_start);
+                max_x = std::max(max_x, run_end);
                 min_y = std::min(min_y, y);
                 max_y = std::max(max_y, y);
             }
@@ -299,27 +426,36 @@ void detect_center_target()
     center_target_w = 0;
     center_target_h = 0;
 
+    bool found = false;
+
     if (area > 0) {
         center_target_w = max_x - min_x + 1;
         center_target_h = max_y - min_y + 1;
-    }
-    bool found = false;
 
-    if (area > 3 && area < 300) {
-        int w = max_x - min_x + 1;
-        int h = max_y - min_y + 1;
+        int cx = sum_x / area;
+        int cy = sum_y / area;
 
-        // 排除细长线，保留中间块状目标。
-        if (w >= 3 && h >= 3 && w <= 40 && h <= 46) {
+        bool normal_area_ok = (area >= 5 && area <= 320);
+        bool normal_shape_ok = (center_target_w >= 2 &&
+                                center_target_w <= 32 &&
+                                center_target_h >= 1 &&
+                                center_target_h <= 28);
+
+        bool near_area_ok = (area >= 4 && area <= 120);
+        bool near_shape_ok = (center_target_w >= 3 &&
+                              center_target_w <= 22 &&
+                              center_target_h >= 1 &&
+                              center_target_h <= 4);
+        if ((normal_area_ok && normal_shape_ok) || (near_area_ok && near_shape_ok)) {
             found = true;
-            center_target_x = sum_x / area;
-            center_target_y = sum_y / area;
+            center_target_x = cx;
+            center_target_y = cy;
         }
     }
 
     if (found) {
-        center_target_count += 2;
-        if (center_target_count > 8) center_target_count = 8;
+        center_target_count += 3;
+        if (center_target_count > 12) center_target_count = 12;
     } else {
         center_target_count--;
         if (center_target_count < 0) center_target_count = 0;
@@ -327,39 +463,98 @@ void detect_center_target()
         center_target_y = -1;
     }
 
-    center_target_found = center_target_count >= 4;
+    center_target_found = center_target_count >= 3;
 }
-
 void target_fusion_process()
 {
     target_slowdown = false;
 
-    // 没看到中间白块时，不覆盖原来的窄线避障结果。
     if (!center_target_found) {
+        target_action_latched = false;
         return;
     }
 
-    // 看到了中间白块，但识别结果还没稳定：先降速，不强行决定方向。
-    if (!remote_target_valid()) {
+    if (target_action_latched) {
+        return;
+    }
+
+    if (!locked_target_valid()) {
         target_slowdown = true;
         return;
     }
 
-    int cls = remote_target.class_id.load();
+    int cls = locked_target_class;
 
     if (cls == TARGET_WEAPON) {
-        // 武器：直行，不进入绕障。
-        flag.found_obstacle = false;
-        flag.advance_avoid_obstacle_dir = 0;
+        // 武器：直行，不触发任何绕行
+        target_avoid_ms = 0;
+        target_avoid_dir = 0;
         counter.found_obstacle = 0;
-    } else if (cls == TARGET_MATERIAL) {
-        // 物资：右绕。
-        flag.found_obstacle = true;
-        flag.advance_avoid_obstacle_dir = 1;
+        return;
+    }
+
+    if (target_avoid_ms > 0) {
+        return;
+    }
+
+    if (cls == TARGET_MATERIAL) {
+        // 物资：右绕
+        target_avoid_dir = 1;
+        target_action_latched = true;
+        target_avoid_ms = TARGET_AVOID_TIME_MS;
     } else if (cls == TARGET_VEHICLE) {
-        // 交通工具：左绕。
-        flag.found_obstacle = true;
-        flag.advance_avoid_obstacle_dir = -1;
+        // 交通工具：左绕
+        target_avoid_dir = -1;
+        target_action_latched = true;
+        target_avoid_ms = TARGET_AVOID_TIME_MS;
+    }
+}
+
+void draw_target_route_debug(cv::Mat& img)//绘制目标后的偏移路线
+{
+    if (img.empty()) {
+        return;
+    }
+
+    const int img_w = img.cols;
+    const int img_h = img.rows;
+
+    int dir = 0;
+
+    if (target_avoid_ms > 0) {
+        dir = target_avoid_dir;
+    } else if (center_target_found && locked_target_class == TARGET_MATERIAL) {
+        dir = 1;
+    } else if (center_target_found && locked_target_class == TARGET_VEHICLE) {
+        dir = -1;
+    } else if (center_target_found && locked_target_class == TARGET_WEAPON) {
+        dir = 0;
+    }
+
+    const cv::Scalar route_color(0, 255, 255);
+    const int max_offset = 8;
+
+    std::vector<cv::Point> route_points;
+
+    for (int i = 0; i < distance_middle_line_index; i++) {
+        int x = distance_middle_line_pers[i][0];
+        int y = distance_middle_line_pers[i][1];
+
+        if (x < 0 || x >= img_w || y < 0 || y >= img_h) {
+            continue;
+        }
+
+        int offset = dir * max_offset * y / img_h;
+        int rx = x + offset;
+
+        if (rx < 0) rx = 0;
+        if (rx >= img_w) rx = img_w - 1;
+
+        route_points.emplace_back(rx, y);
+    }
+
+    for (size_t i = 1; i < route_points.size(); i++) {
+        cv::line(img, route_points[i - 1], route_points[i], route_color, 1);
     }
 }
 
@@ -436,8 +631,10 @@ void* realtime_task(void* arg) {
                 // LOGW("timer_event", "`定时器周期不准确，误差: %.2lfms", time_used.count() * 1000 - timer_period);
             }
 
-            pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(560));
-            pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(560));
+            if (!flag.stop && running) {
+                pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(750));
+                pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(750));
+            }
             // 定时器中断开始
             MEASURE_TIME("realtime_task_cost", {
             icm20948_get_anglez(icm20948, 0.01f);
@@ -495,11 +692,14 @@ void* realtime_task(void* arg) {
 
             element_check();
 
-            detect_center_target();
-            target_fusion_process();
+            // detect_center_target();
+            // update_remote_target_lock();
+            // target_fusion_process();
 
             element_count();
             element_process();
+
+            image_diff_process();
 
             detect_count_max = get_border_line(80);
             outbounds_detection();
@@ -526,8 +726,8 @@ void* realtime_task(void* arg) {
                     wheel_turn_pid.Kd = Kd_max;
                 // }
             }else if(counter.drive_in_crossroad > 400){
-                wheel_turn_pid.Kp = Kp_max * 1.10f;
-                wheel_turn_pid.Kd = Kd_max * 0.90f;
+                wheel_turn_pid.Kp = Kp_max ;//* 1.10f;
+                wheel_turn_pid.Kd = Kd_max ;//* 0.90f;
             }else{
 
                 wheel_turn_pid.Kp = Kp_max;
@@ -597,15 +797,45 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("rt:%d,dt:%d\n",running_time,delay_time);
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n", center_target_found, center_target_count, remote_target.class_id.load(), remote_target.confidence.load(), remote_target.target_x.load(), remote_target.target_y.load(), flag.advance_avoid_obstacle_dir, counter.drive_in_obstacle);
             // });
-                vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",
-                   center_target_found,
-                   center_target_count,
-                   center_target_area,
-                   center_target_w,
-                   center_target_h,
-                   remote_target.class_id.load(),
-                   remote_target.confidence.load(),
-                   remote_target.target_y.load());
+                // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",
+                //    center_target_found,
+                //    center_target_count,
+                //    center_target_area,
+                //    center_target_w,
+                //    center_target_h,
+                //    remote_target.class_id.load(),
+                //    remote_target.confidence.load(),
+                //    remote_target.target_y.load());
+
+                // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",
+                //    center_target_found,
+                //    center_target_count,
+                //    remote_target.class_id.load(),
+                //    remote_target.confidence.load(),
+                //    locked_target_class,
+                //    locked_target_confidence,
+                //    flag.advance_avoid_obstacle_dir,
+                //    counter.drive_in_obstacle);
+                // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",
+                //     image_diff,
+                //     counter.drive_in_obstacle,
+                //     narrow_line_index,
+                //     flag.advance_avoid_obstacle_dir,
+                //     flag.found_obstacle,
+                //     counter.found_obstacle,
+                //     left_lost_count,
+                //     right_lost_count);
+
+                vofa_udp.printf("%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%d\n",
+                    speed_setpoint,
+                    left_speed_setpoint,
+                    right_speed_setpoint,
+                    counter.drive_in_obstacle,
+                    left_lost_count,
+                    image_diff,
+                    turn_angle,
+                    distances[4]);
+
             // 速度环PID
             if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
                 speed_setpoint = 180;
@@ -618,11 +848,13 @@ void* realtime_task(void* arg) {
                     speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
                 }
             }
-            if (counter.drive_in_obstacle > 0) {
-                speed_setpoint *= 0.65f;
-            } else if (target_slowdown) {
-                speed_setpoint *= 0.75f;
-            }
+                // if (target_avoid_ms > 0) {
+                //     speed_setpoint *= 0.60f;
+                // } else if (counter.drive_in_obstacle > 0) {
+                //     // speed_setpoint *= 0.65f;
+                // } else if (target_slowdown) {
+                //     speed_setpoint *= 0.75f;
+                // }
 
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
             // right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
@@ -659,6 +891,12 @@ void* realtime_task(void* arg) {
                         right_wheel_speed_pid.last_last_error = 0;
                         right_wheel_speed_pid.last_out = 0;
                         right_wheel_speed_pid.out = 0;
+                        wheel_turn_pid.last_error = 0;
+                        wheel_turn_pid.last_out = 0;
+                        wheel_turn_pid.integral = 0;
+                        turn_pidout = 0;
+                        turn_angle = 0;
+
                     }
                     counter.start_motor_delay += 10;
                 }
@@ -726,6 +964,7 @@ void* realtime_task(void* arg) {
             // 定时器中断结束
 
 OUT:
+    emergency_stop_outputs();
     close(timer_fd);
     close(epoll_fd);
     icm20948_delete(icm20948);
@@ -798,6 +1037,7 @@ void element_count() {
         if (counter.found_obstacle > 5) {
             BEEP::beep_ms(200);
             counter.drive_in_obstacle = 1000;
+            counter.found_obstacle = 0;
         }
     }
 
@@ -808,7 +1048,13 @@ void element_count() {
     if (counter.drive_in_obstacle > 0) {
         counter.drive_in_obstacle -= 10;
     }
-
+    if (target_avoid_ms > 0) {
+        target_avoid_ms -= 10;
+        if (target_avoid_ms < 0) {
+            target_avoid_ms = 0;
+            target_avoid_dir = 0;
+        }
+    }
     // 左环岛计数处理
     if(flag.found_left_roundabout && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0 && counter.drive_in_ramp == 0) {
         counter.found_left_roundabout += 2;
@@ -830,7 +1076,7 @@ void element_count() {
     // 右环岛计数处理
     if(flag.found_right_roundabout && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0 && counter.drive_in_ramp == 0) {
         counter.found_right_roundabout += 2;
-        if(counter.found_right_roundabout > 11){
+        if(counter.found_right_roundabout >11){
             BEEP::beep_ms(200);
             counter.drive_in_right_roundabout = 10000;
         }
@@ -914,14 +1160,14 @@ void element_process() {
         counter.drive_in_left_roundabout = 5000;
         angelZ = icm20948_data.anglez;
         fix_left_break(0, 60);
-    } else if(counter.drive_in_left_roundabout > 100){
+    } else if(counter.drive_in_left_roundabout > 80){
         int end_x = bottom_end_x;
         if(end_x < road_distances[0]) end_x = road_distances[0];
         if(end_x > 78) end_x = 78;
         if(angelZ - icm20948_data.anglez < 60) {
             erase_top_right_road(end_x - road_distances[15], 0, end_x, 60);
-        } else if(angelZ - icm20948_data.anglez < 320){
-            erase_top_right_road(end_x - road_distances[30], 0, end_x, 60);
+        } else if(angelZ - icm20948_data.anglez < 330){
+            erase_top_right_road(end_x - road_distances[35], 0, end_x, 60);
             counter.drive_in_left_roundabout = 800;
         } else if(counter.drive_in_left_roundabout > 300){
             fix_left_break(0, 60);
@@ -957,14 +1203,14 @@ void element_process() {
         counter.drive_in_right_roundabout = 5000;
         fix_right_break(0, 60);
         angelZ = icm20948_data.anglez;
-    } else if(counter.drive_in_right_roundabout > 100){
+    } else if(counter.drive_in_right_roundabout > 80){
         int start_x = bottom_start_x;
         if(start_x > 80 - road_distances[0]) start_x = 80 - road_distances[0];
         if(start_x < 1) start_x = 1;
         if(angelZ - icm20948_data.anglez > -60) {
-            erase_top_left_road(start_x + road_distances[20], 0, start_x, 60);
+            erase_top_left_road(start_x + road_distances[15], 0, start_x, 60);
         } else if(angelZ - icm20948_data.anglez > -330) {
-            erase_top_left_road(start_x + road_distances[30], 0, start_x, 60);
+            erase_top_left_road(start_x + road_distances[35], 0, start_x, 60);
             counter.drive_in_right_roundabout = 800;
         } else if(counter.drive_in_right_roundabout > 300){
             fix_right_break(0, 60);
@@ -1001,21 +1247,56 @@ void image_diff_process() {
         if(counter.drive_in_crossroad > 1800) {
             image_diff += 3500;
         }
+    }else if(target_avoid_ms > 0) {
+        left_sum = 0;
+        right_sum = 0;
+        int img_start = 0;
+        if(img_start < incision) img_start = incision;
+        int img_end = img_start + IMAGE_VALID_NUM;
+        if(img_end > detect_count_max) img_end = detect_count_max;
+
+        for(int i = img_start; i < img_end; i++) {
+            float dec = 4 * max_white_column.left_height - 150;
+            if (dec < 0) dec = 0;
+
+            float y_weight = static_cast<float>(middle_line[i][1]) - dec;
+            if (y_weight < 0) y_weight = 0;
+
+            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE)
+                        * (1.0f + y_weight / 20.0f);
+        }
+
+        left_sum *= 10;
+
+        int bias = TARGET_AVOID_BIAS * target_avoid_dir;
+
+        // 最后一段时间加反向小偏置，帮助回正
+        if (target_avoid_ms <= TARGET_AVOID_RETURN_MS) {
+            bias = -TARGET_AVOID_RETURN_BIAS * target_avoid_dir;
+        }
+
+        left_sum += bias;
+        image_diff = right_sum - left_sum;
+
     }else if(counter.drive_in_obstacle > 0) {
         left_sum = 0;
         right_sum = 0;
         int img_start = 0;
-        if(img_start < incision)img_start = incision;
+        if(img_start < incision) img_start = incision;
         int img_end = img_start + IMAGE_VALID_NUM;
         if(img_end > detect_count_max) img_end = detect_count_max;
+
         for(int i = img_start; i < img_end; i++) {
             float dec = 4 * max_white_column.left_height - 150;
-            if (dec<0) dec=0;
-            float y_weight=static_cast<float>(middle_line[i][1])-dec;
-            if (y_weight<0) y_weight=0;
-            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/20.0f);
-            // left_sum -= middle_line[i][0] - IMAGE_MIDDLE;
+            if (dec < 0) dec = 0;
+
+            float y_weight = static_cast<float>(middle_line[i][1]) - dec;
+            if (y_weight < 0) y_weight = 0;
+
+            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE)
+                        * (1.0f + y_weight / 20.0f);
         }
+
         left_sum *= 10;
         left_sum += (6000 * flag.advance_avoid_obstacle_dir);
         image_diff = right_sum - left_sum;
@@ -1107,12 +1388,14 @@ void *non_realtime_task(void *arg) {
                 cv::circle(gray3ch, cv::Point(lost_x2, lost_y2), 0, cv::Scalar(255, 0, 255), -1);
                 std::string info_text = "C:" + std::to_string(counter.drive_in_crossroad);
                 cv::putText(gray3ch, info_text, cv::Point(2, 12), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 255, 255), 1);
+               //看识别目标线路绘制
                 cv::cvtColor(cv_image,cv_image3ch, cv::COLOR_GRAY2BGR);
                 tcp_draw_border_line(cv_image3ch,0,0,left_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
                 tcp_draw_border_line(cv_image3ch,0,0,right_distance_line_pers, cv::Scalar(0xff, 0xFF, 0));
                 tcp_draw_border_line(cv_image3ch,0,0,distance_middle_line_pers, cv::Scalar(0, 0xff, 0));
                 tcp_draw_border_line(cv_image3ch,0,0,narrow_line, cv::Scalar(0xff, 0, 0));
 
+                // draw_target_route_debug(cv_image3ch);
             // MEASURE_TIME("image write", {
             // 发送已绘制标注的图像，避免只发送原始帧
             // vofa_udp_img.imwrite(*LQU_CAM_image, 320,240);
@@ -1134,11 +1417,7 @@ void *non_realtime_task(void *arg) {
 }
 
 void signal_handler(int sig) {
-    Moto_L.set_speed(0);
-    Moto_R.set_speed(0);
-    running = false;
-    Moto_L.set_speed(0);
-    Moto_R.set_speed(0);
+    emergency_stop_outputs();
     g_signal_received = sig;
     log_shutdown();
 }
@@ -1167,6 +1446,7 @@ int main()
     pthread_t nrt_thread;
 
     std::thread(target_recv_thread).detach();
+    std::thread(terminal_stop_thread).detach();
 
     pthread_create(&rt_thread, nullptr, realtime_task, nullptr);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // 运行1秒
