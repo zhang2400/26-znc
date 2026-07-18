@@ -4,6 +4,14 @@
 
 float CAR_ANGLE_CONVERT = 3.0f;
 
+// 必须先稳定看到绿色，然后稳定看不到绿色，才允许启动。
+bool green_start_armed = false;
+
+int green_seen_count = 0;
+int green_lost_count = 0;
+
+constexpr int GREEN_START_SEEN_COUNT = 3;
+constexpr int GREEN_START_LOST_COUNT = 3;
 // PID相关变量
 PID_Incremental left_wheel_speed_pid;
 PID_Incremental right_wheel_speed_pid;
@@ -15,7 +23,7 @@ int speedtest = 1000;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 190.0f; //基础速度
+float speed_base = 170.0f; //基础速度
 float boost_ratio = 0.0f; // 直道加速比率
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -66,10 +74,10 @@ int ret1,ret2;
 // 传输层相关变量
 auto tcp_transport = std::make_unique<TCPTransport>("0.0.0.0", 1347);
 auto vofa_tcp = VOFA(std::move(tcp_transport));
-auto udp_transport = std::make_unique<UDPTransport>("10.210.250.121", 1349);
+auto udp_transport = std::make_unique<UDPTransport>("10.20.167.121", 1349);
 auto vofa_udp = VOFA(std::move(udp_transport));
 // 图传专用UDP通道（与vofa_udp分开，避免RT线程printf数据和图像数据互相交错）
-auto udp_img_transport = std::make_unique<UDPTransport>("10.210.250.121", 1348);
+auto udp_img_transport = std::make_unique<UDPTransport>("10.20.167.121", 1348);
 auto vofa_udp_img = VOFA(std::move(udp_img_transport));
 
 int incision = 1;
@@ -102,8 +110,13 @@ double distance = -1;
 
 // ===================== 识别板通信与目标融合 =====================
 
-constexpr int TARGET_TRIGGER_Y_TH = 120;     // y 大于这个值才开始执行动作，按实测调
-constexpr int TARGET_X_CENTER_MIN = 60;      // 目标横向有效范围，按识别图像宽度调
+// y大于160后才允许把类别加入最近5次ID投票。
+constexpr int TARGET_ID_RECORD_Y_TH = 160;
+
+// y达到210后才正式执行识别动作。
+constexpr int TARGET_TRIGGER_Y_TH = 210;
+
+constexpr int TARGET_X_CENTER_MIN = 60;
 constexpr int TARGET_X_CENTER_MAX = 300;
 
 
@@ -115,15 +128,15 @@ enum {
 };
 
 constexpr int TARGET_LISTEN_PORT = 2233;
-constexpr int TARGET_PACKET_SIZE = 12;
-constexpr int TARGET_CONF_TH = 60;           //控制识别类别可信度
+constexpr int TARGET_PACKET_SIZE = 13;
+constexpr int TARGET_CONF_TH = 10;           //控制识别类别可信度
 constexpr int TARGET_TIMEOUT_MS = 200;       //控制通信结果多久过期
 
 // 至少连续看到红块这么久，丢失红块时才允许补偿触发。
-constexpr int TARGET_TRACK_MIN_MS = 200;
+constexpr int TARGET_TRACK_MIN_MS = 80;
 
 // 红块最后一次有效坐标距离现在不能超过这么久。
-constexpr int TARGET_LOST_TRIGGER_MAX_MS = 400;
+constexpr int TARGET_LOST_TRIGGER_MAX_MS = 700;
 
 // 使用最近5个有效id投票。
 constexpr int TARGET_ID_HISTORY_SIZE = 5;
@@ -134,6 +147,7 @@ struct RemoteTarget {
     std::atomic<int> confidence{0};
     std::atomic<int> target_x{-1};
     std::atomic<int> target_y{-1};
+    std::atomic<int> green_present{0};
     std::atomic<uint64_t> last_recv_ms{0};
     std::atomic<uint8_t> seq{0};
 
@@ -146,7 +160,10 @@ RemoteTarget remote_target;
 int target_avoid_ms = 0;
 int target_avoid_dir = 0;
 uint8_t last_target_action_seq = 255;
+// 最后一次看到有效红块坐标后，继续减速一段时间。
+uint64_t target_slowdown_until_ms = 0;
 
+constexpr int TARGET_SLOWDOWN_HOLD_MS = 600;    //坐标消失后继续减速600ms
 constexpr int TARGET_AVOID_TIME_MS = 900;       //识别目标绕行总时间
 constexpr int TARGET_AVOID_BIAS = 9500;         //识别目标绕行偏置
 constexpr int TARGET_AVOID_RETURN_MS = 100;     //最后多少 ms 做回正250
@@ -181,6 +198,64 @@ uint64_t get_ms()
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
 }
 
+void green_start_process()
+{
+    if (flag.start || flag.stop) {
+        return;
+    }
+
+    const uint64_t last =
+        remote_target.last_recv_ms.load();
+    const uint64_t now = get_ms();
+
+    // 没有收到新鲜通信时不进行判断，避免断线误启动。
+    if (last == 0 ||
+        now - last > TARGET_TIMEOUT_MS) {
+        green_seen_count = 0;
+        green_lost_count = 0;
+        return;
+        }
+
+    const bool green_present =
+        remote_target.green_present.load() != 0;
+
+    if (!green_start_armed) {
+        if (green_present) {
+            ++green_seen_count;
+        } else {
+            green_seen_count = 0;
+        }
+
+        // 启动前必须先确认视野中确实存在绿色区块。
+        if (green_seen_count >=
+            GREEN_START_SEEN_COUNT) {
+            green_start_armed = true;
+            green_lost_count = 0;
+            }
+
+        return;
+    }
+
+    // 已经看到过绿色，开始等待绿色稳定消失。
+    if (!green_present) {
+        ++green_lost_count;
+    } else {
+        green_lost_count = 0;
+    }
+
+    if (green_lost_count >=
+        GREEN_START_LOST_COUNT) {
+        flag.start = true;
+        flag.stop = false;
+
+        counter.start_motor_delay = 0;
+        counter.beep_ms = 300;
+
+        green_start_armed = false;
+        green_seen_count = 0;
+        green_lost_count = 0;
+        }
+}
 void emergency_stop_outputs()
 {
     running = false;
@@ -379,6 +454,7 @@ void target_recv_thread()
                 int conf = pending[4];
                 int16_t x = read_i16_le(pending.data() + 5);
                 int16_t y = read_i16_le(pending.data() + 7);
+                int green_present = pending[11] != 0 ? 1 : 0;
 
                 // 奇数表示接收线程正在更新字段。
                 remote_target.packet_counter.fetch_add(
@@ -389,6 +465,7 @@ void target_recv_thread()
                 remote_target.confidence.store(conf);
                 remote_target.target_x.store(x);
                 remote_target.target_y.store(y);
+                remote_target.green_present.store(green_present);
                 remote_target.last_recv_ms.store(get_ms());
 
                 // 偶数表示完整数据包已经写完。
@@ -406,6 +483,7 @@ void target_recv_thread()
         remote_target.target_x.store(0);
         remote_target.target_y.store(0);
         remote_target.last_recv_ms.store(0);
+        remote_target.green_present.store(0);
         close(client_fd);
     }
 
@@ -423,7 +501,72 @@ void reset_target_tracking()
         target_id_history[i] = TARGET_UNKNOWN;
     }
 }
+// 其他道路模块已经进入正式执行状态。
+bool other_element_running()
+{
+    return counter.drive_in_crossroad > 0 ||
+           counter.drive_in_obstacle > 0 ||
+           counter.drive_in_ramp > 0 ||
+           counter.drive_in_left_roundabout > 0 ||
+           counter.drive_in_right_roundabout > 0 ||
+           counter.drive_in_garage > 0;
+}
 
+// 其他道路模块正在检测确认，但还没有正式进入执行状态。
+bool other_element_detecting()
+{
+    return flag.found_crossroad ||
+           flag.found_obstacle ||
+           flag.found_ramp ||
+           flag.found_left_roundabout ||
+           flag.found_right_roundabout ||
+           flag.found_garage;
+}
+
+// 当前是否允许识别减速、记录ID和触发识别动作。
+bool target_control_allowed()
+{
+    if (flag.stop || counter.stop_motor > 0) {
+        return false;
+    }
+
+    if (other_element_running()) {
+        return false;
+        }
+
+    return true;
+}
+bool target_slowdown_active()
+{
+    const int y = remote_target.target_y.load();
+    const uint64_t last =
+        remote_target.last_recv_ms.load();
+    const uint64_t now = get_ms();
+
+    // 收到新鲜坐标且y>0，立即进入减速。
+    if (last > 0 &&
+        now - last < TARGET_TIMEOUT_MS &&
+        y > 0) {
+        target_slowdown_until_ms =
+            now + TARGET_SLOWDOWN_HOLD_MS;
+        }
+
+    // 坐标短暂消失后继续保持减速。
+    return target_slowdown_until_ms > 0 &&
+           now <= target_slowdown_until_ms;
+}
+// 彻底取消当前识别控制，但保留已执行seq，防止同一目标重复触发。
+void cancel_target_control()
+{
+    target_avoid_ms = 0;
+    target_avoid_dir = 0;
+    target_slowdown_until_ms = 0;
+
+    reset_target_tracking();
+
+    tracked_target_seq = 0;
+    tracked_target_seq_valid = false;
+}
 void push_target_id(int cls)
 {
     if (cls < TARGET_WEAPON || cls > TARGET_VEHICLE) {
@@ -500,14 +643,14 @@ void execute_target_action(int cls, uint8_t seq)
 
     if (cls == TARGET_WEAPON) {
         // 武器：正常直行。
-        target_avoid_dir =0;
+        target_avoid_dir =1;
         target_avoid_ms = TARGET_AVOID_TIME_MS;
         return;
     }
 
     if (cls == TARGET_MATERIAL) {
         // 物资：右绕。
-        target_avoid_dir = 1;
+        target_avoid_dir = 0;
         target_avoid_ms = TARGET_AVOID_TIME_MS;
         return;
     }
@@ -521,6 +664,10 @@ void execute_target_action(int cls, uint8_t seq)
 void target_fusion_process(){
     // 先读取包编号，再读取数据，最后再次确认包编号。
     // 如果读取期间刚好收到新包，本周期不处理，下一周期再处理。
+    // 双重保护：其他模块检测或执行期间禁止识别处理。
+    if (!target_control_allowed()) {
+        return;
+    }
     uint32_t packet_before =
     remote_target.packet_counter.load(
         std::memory_order_acquire);
@@ -581,8 +728,9 @@ void target_fusion_process(){
         x >= TARGET_X_CENTER_MIN &&
         x <= TARGET_X_CENTER_MAX;
 
-    // 红块坐标存在且类别可信时，才加入最近5次投票。
-    if (position_present &&
+    // 只有目标位于中心区域且y大于160，才记录有效ID。
+    if (position_centered &&
+        y > TARGET_ID_RECORD_Y_TH &&
         conf >= TARGET_CONF_TH &&
         cls >= TARGET_WEAPON &&
         cls <= TARGET_VEHICLE) {
@@ -725,8 +873,8 @@ void* realtime_task(void* arg) {
             // Moto_L.set_speed(speedtest);
             // Moto_R.set_speed(speedtest);
             if (flag.start && !flag.stop && running) {
-                pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(1050));
-                pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(1050));
+                pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(1200));
+                pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(1200));
             }else
             {
                 pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(500)),
@@ -788,11 +936,20 @@ void* realtime_task(void* arg) {
             get_narrow_line();
 
             element_check();
-
-            clear_remote_target_if_timeout();
-            target_fusion_process();
-
             element_count();
+
+            // 清除超时通信数据。
+            clear_remote_target_if_timeout();
+            // 未发车时，根据绿色区块的消失启动。
+            green_start_process();
+            if (other_element_running()) {
+                // 其他模块正式执行时，立即清空识别绕行和投票。
+                cancel_target_control();
+            }
+                // else {
+            //     // 没有其他模块检测或执行时，才处理识别信息。
+            //     target_fusion_process();
+            // }
             element_process();
 
             image_diff_process();
@@ -906,37 +1063,35 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n", center_target_found, center_target_count, remote_target.class_id.load(), remote_target.confidence.load(), remote_target.target_x.load(), remote_target.target_y.load(), flag.advance_avoid_obstacle_dir, counter.drive_in_obstacle);
             // });
                 // vofa_udp.printf("%d\n",speedtest);
-                // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.2f,%d,%d\n",
-                //     remote_target.class_id.load(),
-                //     remote_target.confidence.load(),
-                //     remote_target.target_x.load(),
-                //     remote_target.target_y.load(),
-                //     target_avoid_dir,
-                //     target_avoid_ms,
-                //     turn_angle,
-                //     flag.advance_avoid_obstacle_dir,
-                //     counter.drive_in_obstacle);
-
-
-                // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n",
-                //     image_diff,
-                //     counter.drive_in_obstacle,
-                //     narrow_line_index,
-                //     flag.advance_avoid_obstacle_dir,
-                //     flag.found_obstacle,
-                //     counter.found_obstacle,
-                //     left_lost_count,
-                //     right_lost_count);
-
-                vofa_udp.printf("%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%d\n",
-                    speed_setpoint,
-                    left_speed_setpoint,
-                    right_speed_setpoint,
-                    counter.drive_in_obstacle,
-                    left_lost_count,
-                    image_diff,
+                vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.2f,%d,%d\n",
+                    remote_target.class_id.load(),
+                    remote_target.confidence.load(),
+                    remote_target.target_x.load(),
+                    remote_target.target_y.load(),
+                    target_avoid_dir,
+                    target_avoid_ms,
                     turn_angle,
-                    distances[39]);
+                    flag.advance_avoid_obstacle_dir,
+                    counter.drive_in_obstacle);
+
+
+                // vofa_udp.printf(
+                // "%d,%d,%d,%d,%d\n",
+                // remote_target.green_present.load(),
+                // green_start_armed ? 1 : 0,
+                // green_seen_count,
+                // green_lost_count,
+                // flag.start ? 1 : 0);
+
+                // vofa_udp.printf("%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%d\n",
+                //     speed_setpoint,
+                //     left_speed_setpoint,
+                //     right_speed_setpoint,
+                //     counter.drive_in_obstacle,
+                //     left_lost_count,
+                //     image_diff,
+                //     turn_angle,
+                //     distances[39]);
 
             // 速度环PID
             if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
@@ -950,11 +1105,9 @@ void* realtime_task(void* arg) {
                     speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
                 }
             }
-                if (remote_target.target_x > 0) {
-                    // speed_setpoint *= 0.60f;
-                    speed_setpoint = 40;
-                // } else if (counter.drive_in_obstacle > 0) {
-                //     // speed_setpoint *= 0.65f;
+                if (target_control_allowed() && target_slowdown_active())
+                {
+                    speed_setpoint = 60;
                 }
 
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
@@ -1140,8 +1293,7 @@ void element_count() {
             counter.drive_in_obstacle = 1000;
             counter.found_obstacle = 0;
 
-            target_avoid_ms = 0;
-            target_avoid_dir = 0;
+            cancel_target_control();
         }
     }
 
@@ -1336,64 +1488,99 @@ void element_check() {
     check_roundabout();
 }
 
-void image_diff_process() {
-    if(counter.drive_in_crossroad > 400) {
+void image_diff_process()
+{
+    if (counter.drive_in_crossroad > 400) {
         // 十字处理
         left_sum = 0;
         right_sum = 0;
-        for(int i = 0; i < distance_middle_line_index; i++){
-            float y_weight= 60 - distance_middle_line[i][1];
-            if (y_weight<0) y_weight=0;
-            left_sum -= static_cast<float>(distance_middle_line[i][0] - IMAGE_MIDDLE) * (1.0f + y_weight/15.0f);
-        }
-        left_sum *= 10;
-        image_diff = right_sum - left_sum;
-    }else if(counter.drive_in_obstacle > 0) {
-        left_sum = 0;
-        right_sum = 0;
-        int img_start = 0;
-        if(img_start < incision) img_start = incision;
-        int img_end = img_start + IMAGE_VALID_NUM;
-        if(img_end > detect_count_max) img_end = detect_count_max;
 
-        for(int i = img_start; i < img_end; i++) {
-            float dec = 4 * max_white_column.left_height - 150;
-            if (dec < 0) dec = 0;
+        for (int i = 0; i < distance_middle_line_index; i++) {
+            float y_weight = 60 - distance_middle_line[i][1];
+            if (y_weight < 0) {
+                y_weight = 0;
+            }
 
-            float y_weight = static_cast<float>(middle_line[i][1]) - dec;
-            if (y_weight < 0) y_weight = 0;
-
-            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE)
-                        * (1.0f + y_weight / 20.0f);
+            left_sum -= static_cast<float>(
+                distance_middle_line[i][0] - IMAGE_MIDDLE)
+                * (1.0f + y_weight / 15.0f);
         }
 
         left_sum *= 10;
-        left_sum += (6000 * flag.advance_avoid_obstacle_dir);
         image_diff = right_sum - left_sum;
-    }else if(target_avoid_ms > 0) {
+
+        if (counter.drive_in_crossroad > 1800) {
+            image_diff += 3500;
+        }
+
+    } else if (counter.drive_in_obstacle > 0) {
+        // 原障碍块优先于识别动作
         left_sum = 0;
         right_sum = 0;
-        int img_start = 0;
-        if(img_start < incision) img_start = incision;
+
+        int img_start = incision;
         int img_end = img_start + IMAGE_VALID_NUM;
-        if(img_end > detect_count_max) img_end = detect_count_max;
 
-        for(int i = img_start; i < img_end; i++) {
+        if (img_end > detect_count_max) {
+            img_end = detect_count_max;
+        }
+
+        for (int i = img_start; i < img_end; i++) {
             float dec = 4 * max_white_column.left_height - 150;
-            if (dec < 0) dec = 0;
+            if (dec < 0) {
+                dec = 0;
+            }
 
-            float y_weight = static_cast<float>(middle_line[i][1]) - dec;
-            if (y_weight < 0) y_weight = 0;
+            float y_weight =
+                static_cast<float>(middle_line[i][1]) - dec;
 
-            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE)
-                        * (1.0f + y_weight / 20.0f);
+            if (y_weight < 0) {
+                y_weight = 0;
+            }
+
+            left_sum -= static_cast<float>(
+                middle_line[i][0] - IMAGE_MIDDLE)
+                * (1.0f + y_weight / 20.0f);
+        }
+
+        left_sum *= 10;
+        left_sum += 6000 * flag.advance_avoid_obstacle_dir;
+        image_diff = right_sum - left_sum;
+
+    } else if (target_avoid_ms > 0) {
+        // 没有原障碍时才执行识别转向
+        left_sum = 0;
+        right_sum = 0;
+
+        int img_start = incision;
+        int img_end = img_start + IMAGE_VALID_NUM;
+
+        if (img_end > detect_count_max) {
+            img_end = detect_count_max;
+        }
+
+        for (int i = img_start; i < img_end; i++) {
+            float dec = 4 * max_white_column.left_height - 150;
+            if (dec < 0) {
+                dec = 0;
+            }
+
+            float y_weight =
+                static_cast<float>(middle_line[i][1]) - dec;
+
+            if (y_weight < 0) {
+                y_weight = 0;
+            }
+
+            left_sum -= static_cast<float>(
+                middle_line[i][0] - IMAGE_MIDDLE)
+                * (1.0f + y_weight / 20.0f);
         }
 
         left_sum *= 10;
 
         int bias = TARGET_AVOID_BIAS * target_avoid_dir;
 
-        // 最后一段时间加反向小偏置，帮助回正
         if (target_avoid_ms <= TARGET_AVOID_RETURN_MS) {
             bias = -TARGET_AVOID_RETURN_BIAS * target_avoid_dir;
         }
@@ -1401,34 +1588,26 @@ void image_diff_process() {
         left_sum += bias;
         image_diff = right_sum - left_sum;
 
-    }else {
+    } else {
+        // 普通循迹
         left_sum = 0;
         right_sum = 0;
-        int img_start = 0;
-        if(img_start < incision)img_start = incision;
+
+        int img_start = incision;
         int img_end = img_start + IMAGE_VALID_NUM;
-        if(img_end > detect_count_max) img_end = detect_count_max;
-        for(int i = img_start; i < img_end; i++) {
-            left_sum -= static_cast<float>(middle_line[i][0] - IMAGE_MIDDLE);
+
+        if (img_end > detect_count_max) {
+            img_end = detect_count_max;
         }
+
+        for (int i = img_start; i < img_end; i++) {
+            left_sum -= static_cast<float>(
+                middle_line[i][0] - IMAGE_MIDDLE);
+        }
+
         left_sum *= 10;
-        // left_sum += 4000 * cornering;
         image_diff = right_sum - left_sum;
     }
-    // if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
-    // (flag.need_sec_border && flag.left_sec_border && flag.left_border)) {
-    //     if (image_diff < 0) {
-    //         image_diff -= left_reach_edge * 60;
-    //     }else {
-    //         image_diff += right_reach_edge * 60;
-    //     }
-    // }else if (left_reach_edge > 25 || right_reach_edge > 25) {
-    //     if (image_diff < 0) {
-    //         image_diff -= left_reach_edge * 30;
-    //     }else {
-    //         image_diff += right_reach_edge * 30;
-    //     }
-    // }
 }
 
 // 非实时任务线程函数
