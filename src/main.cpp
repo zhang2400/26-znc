@@ -23,7 +23,7 @@ int speedtest = 1000;
 float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
-float speed_base = 170.0f; //基础速度
+float speed_base = 210.0f; //基础速度
 float boost_ratio = 0.0f; // 直道加速比率
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -873,8 +873,8 @@ void* realtime_task(void* arg) {
             // Moto_L.set_speed(speedtest);
             // Moto_R.set_speed(speedtest);
             if (flag.start && !flag.stop && running) {
-                pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(1200));
-                pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(1200));
+                pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(1100));
+                pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(1100));
             }else
             {
                 pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(500)),
@@ -938,14 +938,14 @@ void* realtime_task(void* arg) {
             element_check();
             element_count();
 
-            // 清除超时通信数据。
-            clear_remote_target_if_timeout();
-            // 未发车时，根据绿色区块的消失启动。
-            green_start_process();
-            if (other_element_running()) {
-                // 其他模块正式执行时，立即清空识别绕行和投票。
-                cancel_target_control();
-            }
+            // // 清除超时通信数据。
+            // clear_remote_target_if_timeout();
+            // // 未发车时，根据绿色区块的消失启动。
+            // green_start_process();
+            // if (other_element_running()) {
+            //     // 其他模块正式执行时，立即清空识别绕行和投票。
+            //     cancel_target_control();
+            // }
                 // else {
             //     // 没有其他模块检测或执行时，才处理识别信息。
             //     target_fusion_process();
@@ -1063,16 +1063,16 @@ void* realtime_task(void* arg) {
             // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%d,%d\n", center_target_found, center_target_count, remote_target.class_id.load(), remote_target.confidence.load(), remote_target.target_x.load(), remote_target.target_y.load(), flag.advance_avoid_obstacle_dir, counter.drive_in_obstacle);
             // });
                 // vofa_udp.printf("%d\n",speedtest);
-                vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.2f,%d,%d\n",
-                    remote_target.class_id.load(),
-                    remote_target.confidence.load(),
-                    remote_target.target_x.load(),
-                    remote_target.target_y.load(),
-                    target_avoid_dir,
-                    target_avoid_ms,
-                    turn_angle,
-                    flag.advance_avoid_obstacle_dir,
-                    counter.drive_in_obstacle);
+                // vofa_udp.printf("%d,%d,%d,%d,%d,%d,%.2f,%d,%d\n",
+                //     remote_target.class_id.load(),
+                //     remote_target.confidence.load(),
+                //     remote_target.target_x.load(),
+                //     remote_target.target_y.load(),
+                //     target_avoid_dir,
+                //     target_avoid_ms,
+                //     turn_angle,
+                //     flag.advance_avoid_obstacle_dir,
+                //     counter.drive_in_obstacle);
 
 
                 // vofa_udp.printf(
@@ -1083,15 +1083,15 @@ void* realtime_task(void* arg) {
                 // green_lost_count,
                 // flag.start ? 1 : 0);
 
-                // vofa_udp.printf("%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%d\n",
-                //     speed_setpoint,
-                //     left_speed_setpoint,
-                //     right_speed_setpoint,
-                //     counter.drive_in_obstacle,
-                //     left_lost_count,
-                //     image_diff,
-                //     turn_angle,
-                //     distances[39]);
+                vofa_udp.printf("%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%d\n",
+                    speed_setpoint,
+                    left_speed_setpoint,
+                    right_speed_setpoint,
+                    counter.drive_in_obstacle,
+                    left_lost_count,
+                    image_diff,
+                    turn_angle,
+                    distances[25]);
 
             // 速度环PID
             if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
@@ -1105,10 +1105,10 @@ void* realtime_task(void* arg) {
                     speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column.left_height - max_white_column_height)) / 3.3)));
                 }
             }
-                if (target_control_allowed() && target_slowdown_active())
-                {
-                    speed_setpoint = 60;
-                }
+                // if (target_control_allowed() && target_slowdown_active())
+                // {
+                //     speed_setpoint = 60;
+                // }
 
             // left_wheel_pidout  = PID_Incremental_Calc(&left_wheel_speed_pid, (float32) Moto_L.speed, left_speed_setpoint);
             // right_wheel_pidout = PID_Incremental_Calc(&right_wheel_speed_pid, (float32) Moto_R.speed, right_speed_setpoint);
@@ -1293,7 +1293,7 @@ void element_count() {
             counter.drive_in_obstacle = 1000;
             counter.found_obstacle = 0;
 
-            cancel_target_control();
+            // cancel_target_control();
         }
     }
 
@@ -1304,13 +1304,13 @@ void element_count() {
     if (counter.drive_in_obstacle > 0) {
         counter.drive_in_obstacle -= 10;
     }
-    if (target_avoid_ms > 0) {
-        target_avoid_ms -= 10;
-        if (target_avoid_ms <= 0) {
-            target_avoid_ms = 0;
-            target_avoid_dir = 0;
-        }
-    }
+    // if (target_avoid_ms > 0) {
+    //     target_avoid_ms -= 10;
+    //     if (target_avoid_ms <= 0) {
+    //         target_avoid_ms = 0;
+    //         target_avoid_dir = 0;
+    //     }
+    // }
     // 左环岛计数处理
     if(flag.found_left_roundabout && counter.drive_in_left_roundabout == 0 && counter.drive_in_right_roundabout == 0 && counter.drive_in_ramp == 0) {
         counter.found_left_roundabout += 2;
@@ -1724,7 +1724,7 @@ int main()
     pthread_t rt_thread;
     pthread_t nrt_thread;
 
-    std::thread(target_recv_thread).detach();
+    // std::thread(target_recv_thread).detach();
     std::thread(terminal_stop_thread).detach();
 
     pthread_create(&rt_thread, nullptr, realtime_task, nullptr);
