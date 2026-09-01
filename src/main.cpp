@@ -24,6 +24,8 @@ float left_wheel_pidout = 0;
 float right_wheel_pidout = 0;
 
 float speed_base = 210.0f; //基础速度
+// 斑马线后到红块之间的行驶基础速度
+constexpr float RED_BLOCK_SPEED_BASE = 80.0f;
 float boost_ratio = 0.0f; // 直道加速比率
 float speed_setpoint = speed_base;
 float left_speed_setpoint = 0;
@@ -92,8 +94,20 @@ int running_time = 500000;
 
 int running_start_time = 0;
 int delay_time = running_time;
-int stop_in_garage = true;
+int stop_in_garage = false;
 
+// 识别到斑马线后，检测赛道内红块并停车。
+bool red_block_stop_armed = false;
+int red_block_hit_frames = 0;
+
+constexpr int RED_BLOCK_Y_MIN = 8;
+constexpr int RED_BLOCK_Y_MAX = 45;
+constexpr int RED_BLOCK_MIN_RUN = 4;
+constexpr int RED_BLOCK_MIN_ROWS = 3;
+constexpr int RED_BLOCK_MIN_PIXELS = 15;
+constexpr int RED_BLOCK_CONFIRM_FRAMES = 4;
+bool check_red_block_between_borders();
+void red_block_stop_process();
 BEEP beep(GPIO61);
 Moto Moto_L(PWM1_GPIO65, 72, PWM0_GPIO64, 51, false);
 Moto Moto_R(PWM2_GPIO66, 73,PWM3_GPIO67 , 50, true);
@@ -258,17 +272,17 @@ void green_start_process()
 }
 void emergency_stop_outputs()
 {
-    running = false;
+    // running = false;
     flag.stop = true;
-    speed_base = 0;
-    speed_setpoint = 0;
-    left_speed_setpoint = 0;
-    right_speed_setpoint = 0;
-    left_wheel_pidout = 0;
-    right_wheel_pidout = 0;
+    // speed_base = 0;
+    // speed_setpoint = 0;
+    // left_speed_setpoint = 0;
+    // right_speed_setpoint = 0;
+    // left_wheel_pidout = 0;
+    // right_wheel_pidout = 0;
 
-    Moto_L.set_speed(0);
-    Moto_R.set_speed(0);
+    // Moto_L.set_speed(0);
+    // Moto_R.set_speed(0);
     pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(500));
     pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(500));
 }
@@ -873,8 +887,8 @@ void* realtime_task(void* arg) {
             // Moto_L.set_speed(speedtest);
             // Moto_R.set_speed(speedtest);
             if (flag.start && !flag.stop && running) {
-                pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(1100));
-                pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(1100));
+                pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(1300));
+                pwm_set_duty("/dev/zf_device_pwm_servo", static_cast<uint16>(1300));
             }else
             {
                 pwm_set_duty("/dev/zf_device_pwm_esc_1", static_cast<uint16>(500)),
@@ -956,7 +970,8 @@ void* realtime_task(void* arg) {
 
             detect_count_max = get_border_line(80);
             outbounds_detection();
-
+            // 必须在get_border_line()之后调用，此时左右边线才是最新的。
+            red_block_stop_process();
             // });
             // 动态Kp，Kd
             // if ((flag.need_sec_border && flag.right_sec_border && flag.right_border) ||
@@ -1083,21 +1098,27 @@ void* realtime_task(void* arg) {
                 // green_lost_count,
                 // flag.start ? 1 : 0);
 
-                vofa_udp.printf("%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%d\n",
-                    speed_setpoint,
-                    left_speed_setpoint,
-                    right_speed_setpoint,
-                    counter.drive_in_obstacle,
-                    left_lost_count,
-                    image_diff,
-                    turn_angle,
-                    distances[25]);
-
+                // vofa_udp.printf("%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%d\n",
+                //     speed_setpoint,
+                //     left_speed_setpoint,
+                //     right_speed_setpoint,
+                //     counter.drive_in_obstacle,
+                //     left_lost_count,
+                //     image_diff,
+                //     turn_angle,
+                //     distances[14]);
+                vofa_udp.printf(
+                "%d,%d,%d,%d,%d\n",
+                flag.found_garage ? 1 : 0,          // I0：当前是否识别到斑马线
+                counter.drive_in_garage,            // I1：斑马线状态倒计时
+                red_block_stop_armed ? 1 : 0,       // I2：红块停车是否已经布防
+                red_block_hit_frames,               // I4：红块连续命中帧数
+                flag.stop ? 1 : 0);                 // I5：是否已经停车
             // 速度环PID
             if (counter.drive_in_left_roundabout > 5000 || counter.drive_in_right_roundabout > 5000) {
-                speed_setpoint = 190;
+                speed_setpoint = speed_base;
             }else if(counter.drive_in_crossroad > 400) {
-                speed_setpoint = 190;
+                speed_setpoint = speed_base;
             }else {
                 if(max_white_column.left_height > max_white_column_height) {
                     speed_setpoint = (speed_base / (1 - boost_ratio)) * (1 - boost_ratio * (tanh(static_cast<float>(abs(max_white_column_height - max_white_column_height)) / 3.3)));
@@ -1251,6 +1272,9 @@ void element_count() {
         counter.found_garage += 2;
         if (counter.found_garage > 3) {
             BEEP::beep_ms(400);
+            // 斑马线确认后，重新设置到红块前的行驶速度。
+            speed_base = RED_BLOCK_SPEED_BASE;
+            speed_setpoint = RED_BLOCK_SPEED_BASE;
             counter.drive_in_garage = 300;
         }
     }
@@ -1478,7 +1502,176 @@ void element_process() {
         }
     }
 }
+bool check_red_block_between_borders()
+{
+    if (detect_count_max <= 0) {
+        return false;
+    }
 
+    int left_x_by_y[60];
+    int right_x_by_y[60];
+
+    for (int y = 0; y < 60; ++y) {
+        left_x_by_y[y] = -1;
+        right_x_by_y[y] = -1;
+    }
+
+    // 将左右边线整理为每一行对应的x坐标。
+    for (int i = 0; i < detect_count_max; ++i) {
+        int lx = left_border[i][0];
+        int ly = left_border[i][1];
+        int rx = right_border[i][0];
+        int ry = right_border[i][1];
+
+        if (ly >= 0 && ly < 60 && lx >= 0 && lx < 80) {
+            left_x_by_y[ly] = lx;
+        }
+
+        if (ry >= 0 && ry < 60 && rx >= 0 && rx < 80) {
+            right_x_by_y[ry] = rx;
+        }
+    }
+
+    int hit_rows = 0;
+    int consecutive_rows = 0;
+    int max_consecutive_rows = 0;
+    int total_white_pixels = 0;
+
+    for (int y = RED_BLOCK_Y_MIN; y <= RED_BLOCK_Y_MAX; ++y) {
+        int left_x = left_x_by_y[y];
+        int right_x = right_x_by_y[y];
+
+        // 这一行缺少任意一条边线就不参与检测。
+        if (left_x < 0 || right_x < 0) {
+            consecutive_rows = 0;
+            continue;
+        }
+
+        if (left_x > right_x) {
+            int temp = left_x;
+            left_x = right_x;
+            right_x = temp;
+        }
+
+        int road_width = right_x - left_x;
+
+        if (road_width < 14) {
+            consecutive_rows = 0;
+            continue;
+        }
+
+        // 向内缩3个像素，避免把赛道边线当成红块。
+        int scan_start = left_x + 3;
+        int scan_end = right_x - 3;
+
+        if (scan_start < 0) {
+            scan_start = 0;
+        }
+
+        if (scan_end > 79) {
+            scan_end = 79;
+        }
+
+        int current_run = 0;
+        int max_run = 0;
+        int max_run_start = -1;
+        int current_start = -1;
+        int row_white_pixels = 0;
+
+        for (int x = scan_start; x <= scan_end; ++x) {
+            if (binary_image_bak[y][x] != 0) {
+                ++row_white_pixels;
+
+                if (current_run == 0) {
+                    current_start = x;
+                }
+
+                ++current_run;
+
+                if (current_run > max_run) {
+                    max_run = current_run;
+                    max_run_start = current_start;
+                }
+            } else {
+                current_run = 0;
+                current_start = -1;
+            }
+        }
+
+        bool row_has_block = false;
+
+        if (max_run >= RED_BLOCK_MIN_RUN &&
+            max_run <= road_width / 2 &&
+            max_run_start >= 0) {
+            int block_center = max_run_start + max_run / 2;
+            int road_center = (left_x + right_x) / 2;
+
+            // 白块必须位于赛道中央的大范围内。
+            if (std::abs(block_center - road_center) <=
+                road_width / 3) {
+                row_has_block = true;
+            }
+        }
+
+        if (row_has_block) {
+            ++hit_rows;
+            ++consecutive_rows;
+            total_white_pixels += max_run;
+
+            if (consecutive_rows > max_consecutive_rows) {
+                max_consecutive_rows = consecutive_rows;
+            }
+        } else {
+            consecutive_rows = 0;
+        }
+    }
+
+    return hit_rows >= RED_BLOCK_MIN_ROWS &&
+           max_consecutive_rows >= RED_BLOCK_MIN_ROWS &&
+           total_white_pixels >= RED_BLOCK_MIN_PIXELS;
+}
+
+void red_block_stop_process()
+{
+    if (flag.stop) {
+        return;
+    }
+
+    // 只有斑马线已经正式进入计时状态，才启动红块停车功能。
+    if (counter.drive_in_garage > 0) {
+        red_block_stop_armed = true;
+        red_block_hit_frames = 0;
+        return;
+    }
+
+    if (!red_block_stop_armed) {
+        return;
+    }
+
+    // 等斑马线完全离开视野，避免把斑马线本身当成红块。
+    if (flag.found_garage) {
+        red_block_hit_frames = 0;
+        return;
+    }
+
+    if (check_red_block_between_borders()) {
+        ++red_block_hit_frames;
+    } else {
+        red_block_hit_frames = 0;
+    }
+
+    if (red_block_hit_frames >= RED_BLOCK_CONFIRM_FRAMES) {
+        red_block_hit_frames = 0;
+        red_block_stop_armed = false;
+
+        speed_setpoint = 0;
+        left_speed_setpoint = 0;
+        right_speed_setpoint = 0;
+        flag.stop = true;
+
+        BEEP::beep_ms(500);
+    }
+}
 
 void element_check() {
     check_crossroad();
